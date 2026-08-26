@@ -1,0 +1,600 @@
+// Sri Vasavi Agencies — ERP data model
+//
+// Target database: TiDB (MySQL 8.0 wire-compatible).
+// Create the schema with a case-insensitive collation so catalogue and customer
+// search works regardless of capitalisation:
+//   CREATE DATABASE sva_erp CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+//
+// Money is stored as Decimal. Quantities allow 3 dp, unit prices 4 dp, amounts 2 dp.
+// Finalized documents keep their own snapshots (architecture.md §2.2) so that later
+// edits to the product master can never alter historical quotations or invoices.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  BILLING_USER
+  REPORT_USER
+}
+
+enum CustomerType {
+  INDIVIDUAL
+  COMPANY
+  SCHOOL
+  COLLEGE
+  GOVERNMENT
+  INSTITUTION
+  OTHER
+}
+
+enum AddressType {
+  BILLING
+  SHIPPING
+}
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CONVERTED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  READY_TO_ISSUE
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum DiscountType {
+  NONE
+  PERCENTAGE
+  FIXED
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  BANK_TRANSFER
+  CHEQUE
+  OTHER
+}
+
+enum RoundingMode {
+  NONE
+  NEAREST_RUPEE
+}
+
+enum DocumentKind {
+  QUOTATION
+  INVOICE
+}
+
+enum ReviewSource {
+  GOOGLE
+  JUSTDIAL
+  DIRECT
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         Role      @default(BILLING_USER)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  refreshTokens RefreshToken[]
+  quotations    Quotation[]
+  invoices      Invoice[]
+  payments      Payment[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+/// Refresh tokens are persisted by hash so that logout and rotation can revoke them.
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique @db.VarChar(128)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Company settings (architecture.md §7)
+// ---------------------------------------------------------------------------
+
+model CompanySettings {
+  id           String  @id @default(uuid())
+  name         String
+  tradeName    String?
+  legalName    String?
+  gstin        String?
+  pan          String?
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  state        String
+  stateCode    String
+  pincode      String
+  phone          String
+  alternatePhone String?
+  email          String
+  website        String?
+  logoUrl        String?
+
+  /// Public listing links, shown on the website beside the reviews.
+  googleMapsUrl String?
+  justdialUrl   String?
+  /// Set alongside GOOGLE_PLACES_API_KEY to enable automatic review sync.
+  googlePlaceId String?
+
+  bankName          String?
+  bankAccountName   String?
+  bankAccountNumber String?
+  bankIfsc          String?
+  bankBranch        String?
+  upiId             String?
+
+  quotationPrefix              String       @default("SVA/QT")
+  invoicePrefix                String       @default("SVA")
+  financialYearFormat          String       @default("YYYY-YY")
+  defaultPaymentTerms          String       @default("Net 15 days")
+  defaultQuotationValidityDays Int          @default(15)
+  defaultInvoiceNotes          String?      @db.Text
+  termsAndConditions           String?      @db.Text
+  roundingMode                 RoundingMode @default(NEAREST_RUPEE)
+  /// Whether a document line may be billed at zero value (architecture.md §34).
+  allowZeroValueBilling        Boolean      @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("company_settings")
+}
+
+// ---------------------------------------------------------------------------
+// Masters
+// ---------------------------------------------------------------------------
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String? @db.Text
+  /// Housekeeping colour-zone code used by the public catalogue (red/blue/green/yellow).
+  zoneCode    String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products Product[]
+
+  @@map("categories")
+}
+
+model Unit {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  shortName String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+
+  @@map("units")
+}
+
+model GstRate {
+  id        String   @id @default(uuid())
+  rate      Decimal  @unique @db.Decimal(5, 2)
+  label     String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("gst_rates")
+}
+
+model Product {
+  id            String  @id @default(uuid())
+  productCode   String  @unique
+  name          String
+  slug          String  @unique
+  categoryId    String?
+  description   String? @db.Text
+  /// Public-facing usage guidance, e.g. dilution ratio "1:20".
+  dilutionRatio String?
+  packSize      String?
+  imageUrl      String?
+  hsnCode       String?
+  /// Default/reference selling price only — never a billing constraint (architecture.md §2.1).
+  defaultPrice   Decimal  @db.Decimal(14, 4)
+  defaultGstRate Decimal  @db.Decimal(5, 2)
+  unitId         String
+  isActive       Boolean  @default(true)
+  showOnWebsite  Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  category       Category?       @relation(fields: [categoryId], references: [id])
+  unit           Unit            @relation(fields: [unitId], references: [id])
+  quotationItems QuotationItem[]
+  invoiceItems   InvoiceItem[]
+
+  @@index([categoryId])
+  @@index([unitId])
+  @@index([isActive])
+  @@map("products")
+}
+
+// ---------------------------------------------------------------------------
+// Customers
+// ---------------------------------------------------------------------------
+
+model Customer {
+  id             String       @id @default(uuid())
+  customerType   CustomerType @default(INDIVIDUAL)
+  name           String
+  companyName    String?
+  contactPerson  String?
+  phone          String
+  alternatePhone String?
+  email          String?
+  gstin          String?
+  pan            String?
+  state          String
+  stateCode      String
+  notes          String?      @db.Text
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  addresses  CustomerAddress[]
+  quotations Quotation[]
+  invoices   Invoice[]
+
+  @@index([name])
+  @@index([phone])
+  @@map("customers")
+}
+
+model CustomerAddress {
+  id          String      @id @default(uuid())
+  customerId  String
+  addressType AddressType
+  line1       String
+  line2       String?
+  city        String
+  state       String
+  stateCode   String
+  pincode     String
+  isDefault   Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("customer_addresses")
+}
+
+// ---------------------------------------------------------------------------
+// Quotations
+// ---------------------------------------------------------------------------
+
+model Quotation {
+  id                     String    @id @default(uuid())
+  quotationNumber        String?   @unique
+  customerId             String
+  quotationDate          DateTime
+  validUntil             DateTime?
+  placeOfSupply          String
+  placeOfSupplyStateCode String
+  notes                  String? @db.Text
+  termsAndConditions     String? @db.Text
+
+  subtotal      Decimal @db.Decimal(14, 2)
+  discountTotal Decimal @db.Decimal(14, 2)
+  taxableTotal  Decimal @db.Decimal(14, 2)
+  cgstTotal     Decimal @db.Decimal(14, 2)
+  sgstTotal     Decimal @db.Decimal(14, 2)
+  igstTotal     Decimal @db.Decimal(14, 2)
+  roundOff      Decimal @db.Decimal(14, 2)
+  grandTotal    Decimal @db.Decimal(14, 2)
+
+  status      QuotationStatus @default(DRAFT)
+  sentAt      DateTime?
+  decidedAt   DateTime?
+  createdById String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  customer  Customer        @relation(fields: [customerId], references: [id])
+  createdBy User            @relation(fields: [createdById], references: [id])
+  items     QuotationItem[]
+  invoice   Invoice?
+
+  @@index([customerId])
+  @@index([createdById])
+  @@index([status])
+  @@index([quotationDate])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id          String  @id @default(uuid())
+  quotationId String
+  productId   String?
+  lineNumber  Int
+
+  // Snapshots — immune to later product-master edits (architecture.md §2.2)
+  productNameSnapshot String
+  productCodeSnapshot String?
+  hsnCodeSnapshot     String?
+  unitSnapshot        String
+
+  quantity  Decimal @db.Decimal(14, 3)
+  unitPrice Decimal @db.Decimal(14, 4)
+  /// Product master price at the moment this line was saved — audit only (architecture.md §30).
+  masterPriceSnapshot Decimal? @db.Decimal(14, 4)
+
+  discountType  DiscountType @default(NONE)
+  discountValue Decimal      @default(0) @db.Decimal(14, 4)
+  lineDiscount  Decimal      @db.Decimal(14, 2)
+
+  grossValue       Decimal @db.Decimal(14, 2)
+  lineTaxableValue Decimal @db.Decimal(14, 2)
+  gstRate          Decimal @db.Decimal(5, 2)
+  cgstRate         Decimal @db.Decimal(5, 2)
+  cgstAmount       Decimal @db.Decimal(14, 2)
+  sgstRate         Decimal @db.Decimal(5, 2)
+  sgstAmount       Decimal @db.Decimal(14, 2)
+  igstRate         Decimal @db.Decimal(5, 2)
+  igstAmount       Decimal @db.Decimal(14, 2)
+  lineTotal        Decimal @db.Decimal(14, 2)
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  product   Product?  @relation(fields: [productId], references: [id])
+
+  @@index([quotationId])
+  @@index([productId])
+  @@map("quotation_items")
+}
+
+// ---------------------------------------------------------------------------
+// Invoices
+// ---------------------------------------------------------------------------
+
+model Invoice {
+  id                     String    @id @default(uuid())
+  invoiceNumber          String?   @unique
+  customerId             String
+  quotationId            String?   @unique
+  invoiceDate            DateTime
+  dueDate                DateTime?
+  placeOfSupply          String
+  placeOfSupplyStateCode String
+  paymentTerms           String?
+  notes                  String? @db.Text
+  termsAndConditions     String? @db.Text
+
+  subtotal      Decimal @db.Decimal(14, 2)
+  discountTotal Decimal @db.Decimal(14, 2)
+  taxableTotal  Decimal @db.Decimal(14, 2)
+  cgstTotal     Decimal @db.Decimal(14, 2)
+  sgstTotal     Decimal @db.Decimal(14, 2)
+  igstTotal     Decimal @db.Decimal(14, 2)
+  roundOff      Decimal @db.Decimal(14, 2)
+  grandTotal    Decimal @db.Decimal(14, 2)
+  amountPaid    Decimal @default(0) @db.Decimal(14, 2)
+  balanceDue    Decimal @db.Decimal(14, 2)
+
+  status             InvoiceStatus @default(DRAFT)
+  issuedAt           DateTime?
+  cancelledAt        DateTime?
+  cancellationReason String?   @db.Text
+
+  // Buyer snapshot, frozen at issue time so the tax invoice never mutates.
+  customerNameSnapshot    String?
+  customerGstinSnapshot   String?
+  customerAddressSnapshot String? @db.Text
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customer  Customer      @relation(fields: [customerId], references: [id])
+  quotation Quotation?    @relation(fields: [quotationId], references: [id])
+  createdBy User          @relation(fields: [createdById], references: [id])
+  items     InvoiceItem[]
+  payments  Payment[]
+
+  @@index([customerId])
+  @@index([createdById])
+  @@index([status])
+  @@index([invoiceDate])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id         String  @id @default(uuid())
+  invoiceId  String
+  productId  String?
+  lineNumber Int
+
+  productNameSnapshot String
+  productCodeSnapshot String?
+  hsnCodeSnapshot     String?
+  unitSnapshot        String
+
+  quantity            Decimal  @db.Decimal(14, 3)
+  unitPrice           Decimal  @db.Decimal(14, 4)
+  masterPriceSnapshot Decimal? @db.Decimal(14, 4)
+
+  discountType  DiscountType @default(NONE)
+  discountValue Decimal      @default(0) @db.Decimal(14, 4)
+  lineDiscount  Decimal      @db.Decimal(14, 2)
+
+  grossValue       Decimal @db.Decimal(14, 2)
+  lineTaxableValue Decimal @db.Decimal(14, 2)
+  gstRate          Decimal @db.Decimal(5, 2)
+  cgstRate         Decimal @db.Decimal(5, 2)
+  cgstAmount       Decimal @db.Decimal(14, 2)
+  sgstRate         Decimal @db.Decimal(5, 2)
+  sgstAmount       Decimal @db.Decimal(14, 2)
+  igstRate         Decimal @db.Decimal(5, 2)
+  igstAmount       Decimal @db.Decimal(14, 2)
+  lineTotal        Decimal @db.Decimal(14, 2)
+
+  invoice Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@index([invoiceId])
+  @@index([productId])
+  @@map("invoice_items")
+}
+
+// ---------------------------------------------------------------------------
+// Payments
+// ---------------------------------------------------------------------------
+
+model Payment {
+  id              String        @id @default(uuid())
+  invoiceId       String
+  paymentDate     DateTime
+  amount          Decimal       @db.Decimal(14, 2)
+  paymentMethod   PaymentMethod
+  referenceNumber String?
+  notes           String?       @db.Text
+  createdById     String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+  createdBy User    @relation(fields: [createdById], references: [id])
+
+  @@index([invoiceId])
+  @@index([createdById])
+  @@index([paymentDate])
+  @@map("payments")
+}
+
+// ---------------------------------------------------------------------------
+// Numbering + audit
+// ---------------------------------------------------------------------------
+
+/// One row per (kind, financial year). Incremented with an atomic UPDATE ... RETURNING
+/// inside the issuing transaction so two users can never receive the same number.
+model DocumentSequence {
+  id            String       @id @default(uuid())
+  kind          DocumentKind
+  financialYear String       @db.VarChar(16)
+  prefix        String       @db.VarChar(32)
+  nextNumber    Int          @default(1)
+  padding       Int          @default(4)
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([kind, financialYear])
+  @@map("document_sequences")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  oldValues  Json?
+  newValues  Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+/// Public "bulk order" enquiries captured from the website.
+model Enquiry {
+  id           String   @id @default(uuid())
+  name         String
+  organisation String?
+  phone        String
+  email        String?
+  message      String   @db.Text
+  /// Product ids the enquiry mentioned. JSON, because MySQL has no array type.
+  productIds   Json?
+  isHandled    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([isHandled])
+  @@map("enquiries")
+}
+
+/// Customer reviews shown on the public website.
+///
+/// Rows are either entered by an admin (copied from a Google or JustDial
+/// listing, attributed and linked) or pulled from the Google Places API when
+/// one is configured. Nothing here is generated by the application.
+model Review {
+  id         String       @id @default(uuid())
+  source     ReviewSource @default(DIRECT)
+  authorName String
+  /// Optional context, e.g. "Facilities Manager, Villianur".
+  authorRole String?
+  rating     Int
+  text       String       @db.Text
+  reviewDate DateTime
+  /// Link back to the original review or listing.
+  sourceUrl  String?
+  /// Stable id from the external source, so re-syncing updates instead of duplicating.
+  externalId String?      @unique @db.VarChar(191)
+  isPublished Boolean     @default(true)
+  sortOrder  Int          @default(0)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([isPublished])
+  @@map("reviews")
+}

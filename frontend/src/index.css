@@ -1,0 +1,223 @@
+@import "tailwindcss";
+
+/*
+  Sri Vasavi Agencies — design tokens.
+
+  The palette is taken from the Vasavi image the business is named after: the
+  crimson of her saree, temple gold, and the deep plum of the arch behind her.
+  Those three carry the public website. The four housekeeping zone colours
+  (red washroom / blue general / green kitchen / yellow clinical) stay strictly
+  functional — they appear only on chips and rules that encode a real zone.
+
+  The admin ERP uses the same tokens at low saturation: dense financial tables
+  are not the place to spend colour.
+*/
+
+@theme {
+  --color-ink: #2a1220;
+  --color-ink-soft: #5c4351;
+  --color-muted: #8a7480;
+  --color-hairline: #e6d5dc;
+  --color-ground: #fdf6f0;
+  --color-ground-deep: #f6e7dd;
+  --color-surface: #ffffff;
+
+  /* Crimson — the primary brand colour */
+  --color-brand: #a81243;
+  --color-brand-deep: #6d0b2a;
+  --color-brand-bright: #d4235c;
+  --color-brand-tint: #fce7ee;
+
+  /* Temple gold — the accent */
+  --color-gold: #c8890a;
+  --color-gold-bright: #f0b429;
+  --color-gold-tint: #fdf3dc;
+
+  /* Deep plum — the ground for full-bleed bands */
+  --color-plum: #43195f;
+  --color-plum-deep: #2c0f40;
+
+  /* Functional housekeeping zone coding */
+  --color-zone-red: #c8384e;
+  --color-zone-blue: #2f5fbf;
+  --color-zone-green: #3e8e4e;
+  --color-zone-amber: #b8791a;
+
+  --color-danger: #b23b3b;
+  --color-warning: #b8791a;
+  --color-success: #3e8e4e;
+
+  --font-display: "Archivo", "Arial Narrow", sans-serif;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  --radius-panel: 4px;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  body {
+    background-color: var(--color-ground);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* The display face is set expanded and tight — stencilled onto a drum. */
+  .type-display {
+    font-family: var(--font-display);
+    font-variation-settings: "wdth" 112;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 0.98;
+  }
+
+  .type-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .type-data {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-brand);
+    color: #fff;
+  }
+}
+
+@layer components {
+  /* The panel is the one repeated container: a flat white plate on the ground. */
+  .panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-panel);
+  }
+
+  /* Functional zone coding, used on the catalogue. */
+  .zone-strip {
+    background-image: linear-gradient(
+      to right,
+      var(--color-zone-red) 0 25%,
+      var(--color-zone-blue) 25% 50%,
+      var(--color-zone-green) 50% 75%,
+      var(--color-zone-amber) 75% 100%
+    );
+  }
+
+  /* Brand banding for full-bleed sections. */
+  .brand-band {
+    background-image: linear-gradient(135deg, var(--color-plum) 0%, var(--color-brand-deep) 55%, var(--color-brand) 100%);
+  }
+
+  .gold-rule {
+    background-image: linear-gradient(
+      to right,
+      var(--color-gold-bright) 0%,
+      var(--color-gold) 40%,
+      var(--color-brand) 100%
+    );
+  }
+
+  .field-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin-bottom: 0.375rem;
+  }
+
+  .field-input {
+    width: 100%;
+    background: var(--color-surface);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-panel);
+    padding: 0.5rem 0.625rem;
+    font-size: 0.875rem;
+    color: var(--color-ink);
+    transition: border-color 120ms ease;
+  }
+
+  .field-input:hover {
+    border-color: color-mix(in srgb, var(--color-brand) 40%, var(--color-hairline));
+  }
+
+  .field-input:focus {
+    outline: none;
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 3px var(--color-brand-tint);
+  }
+
+  .field-input[aria-invalid="true"] {
+    border-color: var(--color-danger);
+  }
+
+  .field-error {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--color-danger);
+  }
+
+  /* Numeric cells are mono and right-aligned so columns of money line up. */
+  .cell-num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  /* The logo is a devotional image, not a flat mark: it gets a gold frame so it
+     reads as a crest rather than a stray photograph. */
+  .crest {
+    border-radius: 999px;
+    border: 2px solid var(--color-gold-bright);
+    object-fit: cover;
+    object-position: center 22%;
+    background: var(--color-plum-deep);
+  }
+}
+
+/* A single orchestrated page-load reveal, rather than effects scattered about. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise {
+  animation: rise 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}

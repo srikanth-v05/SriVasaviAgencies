@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+frontend/dist/
+backend/dist/
+*.tsbuildinfo
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Logs, coverage, and runtime data
+*.log
+logs/
+coverage/
+.nyc_output/
+tmp/
+temp/
+
+# Local databases and generated Prisma files
+*.db
+*.sqlite
+*.sqlite3
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Local Claude configuration (project skills remain versioned)
+.claude/settings.local.json
+
+# Package-manager and tool caches
+.npm/
+.pnpm-store/
+.yarn/cache/
+.turbo/
+.vite/

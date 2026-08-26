@@ -1,0 +1,21 @@
+{
+  "name": "sri-vasavi-agencies",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Sri Vasavi Agencies - public website and GST billing ERP",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "db:up": "docker compose up -d tidb",
+    "db:down": "docker compose down",
+    "dev": "npm run dev --workspace=backend & npm run dev --workspace=frontend",
+    "dev:api": "npm run dev --workspace=backend",
+    "dev:web": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspace=backend && npm run build --workspace=frontend",
+    "test": "npm run test --workspace=backend",
+    "typecheck": "npm run typecheck --workspace=backend && npm run typecheck --workspace=frontend",
+    "db:create": "docker run --rm --network host mysql:8 mysql -h 127.0.0.1 -P 4100 -u root -e \"CREATE DATABASE IF NOT EXISTS sva_erp CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;\""
+  }
+}

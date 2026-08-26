@@ -1,0 +1,20 @@
+services:
+  # TiDB in standalone mode (unistore) — enough for local development.
+  # Production uses TiDB Cloud; only the connection string differs.
+  tidb:
+    image: pingcap/tidb:v8.1.0
+    container_name: sva_tidb
+    restart: unless-stopped
+    command:
+      - --store=unistore
+      - --path=""
+      - --host=0.0.0.0
+      # Case-insensitive search depends on the collation framework being on.
+      - --config=/dev/null
+    ports:
+      - "4100:4000"
+    healthcheck:
+      test: ["CMD-SHELL", "/tidb-server -V > /dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
