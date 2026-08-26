@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -46,8 +46,14 @@ export function Login() {
         <div className="panel border-t-0 p-7">
           <p className="type-display text-lg text-ink">SRI VASAVI AGENCIES</p>
           <p className="type-eyebrow mt-1">Billing &amp; ERP</p>
+          <Link
+            to="/"
+            className="mt-4 inline-flex text-xs font-medium text-brand underline-offset-4 hover:underline focus:outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+          >
+            ← Back to website
+          </Link>
 
-          <h1 className="mt-6 text-sm font-semibold text-ink">Sign in to continue</h1>
+          <h1 className="mt-5 text-sm font-semibold text-ink">Sign in to continue</h1>
 
           <form onSubmit={onSubmit} className="mt-4 space-y-4" noValidate>
             <Field label="Email" htmlFor="email" error={errors.email?.message}>
