@@ -140,7 +140,7 @@ export function Home() {
                 </li>
               );
             })}
-          </ul>
+          </Reveal>
         </div>
       </section>
 
