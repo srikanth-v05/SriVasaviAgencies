@@ -1,7 +1,13 @@
+import { lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Phone } from "lucide-react";
 import { usePublicCategories, usePublicCompany, usePublicProducts } from "@/features/queries";
+
+const HeroScene = lazy(() =>
+  import("@/components/common/HeroScene").then((m) => ({ default: m.HeroScene })),
+);
 import { CostInUsePanel } from "@/components/common/CostInUsePanel";
+import { Reveal } from "@/components/common/Reveal";
 import { Reviews } from "@/components/common/Reviews";
 import { ZONES, zoneAccent } from "@/lib/zones";
 import { money } from "@/lib/format";
@@ -29,6 +35,13 @@ export function Home() {
           }}
           aria-hidden
         />
+
+        {/* Abstract brand shapes in crimson, gold and plum — quiet ambient motion. */}
+        <div className="pointer-events-none absolute inset-0 opacity-70 lg:opacity-100">
+          <Suspense fallback={null}>
+            <HeroScene />
+          </Suspense>
+        </div>
 
         <div className="relative mx-auto grid max-w-6xl gap-10 px-5 py-14 lg:grid-cols-[1.05fr_1fr] lg:py-20">
           <div className="rise">
@@ -92,7 +105,7 @@ export function Home() {
       {/* -------------------------------------------------- colour zones */}
       <section className="border-b border-hairline bg-surface">
         <div className="mx-auto max-w-6xl px-5 py-14">
-          <div className="max-w-2xl">
+          <Reveal className="max-w-2xl">
             <p className="type-eyebrow text-gold">How the catalogue is organised</p>
             <h2 className="type-display mt-3 text-2xl text-ink sm:text-3xl">Four colours, four zones</h2>
             <p className="mt-3 text-sm leading-relaxed text-ink-soft">
@@ -100,9 +113,13 @@ export function Home() {
               Our catalogue follows the same coding, so whoever raises the indent can match the chemical to the zone
               without reading a datasheet.
             </p>
-          </div>
+          </Reveal>
 
-          <ul className="mt-8 grid gap-px overflow-hidden rounded-[4px] border border-hairline bg-hairline sm:grid-cols-2 lg:grid-cols-4">
+          <Reveal
+            as="ul"
+            stagger
+            className="mt-8 grid gap-px overflow-hidden rounded-[4px] border border-hairline bg-hairline sm:grid-cols-2 lg:grid-cols-4"
+          >
             {ZONES.map((zone) => {
               const category = categories?.find((c) => c.zoneCode === zone.code);
               return (
