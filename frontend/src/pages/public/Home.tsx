@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { ArrowRight, Phone } from "lucide-react";
 import { usePublicCategories, usePublicCompany, usePublicProducts } from "@/features/queries";
 import { CostInUsePanel } from "@/components/common/CostInUsePanel";
 import { Reviews } from "@/components/common/Reviews";
@@ -47,20 +48,22 @@ export function Home() {
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
                 to="/products"
-                className="rounded-[4px] bg-brand px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-deep"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white shadow-[var(--shadow-brand)] transition-all hover:bg-brand-deep hover:shadow-[var(--shadow-md)] active:scale-[0.98]"
               >
                 Browse the catalogue
+                <ArrowRight className="h-4 w-4" strokeWidth={2} />
               </Link>
               <Link
                 to="/bulk-order"
-                className="rounded-[4px] border border-gold bg-gold-tint px-5 py-2.5 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-white"
+                className="rounded-lg border border-gold bg-gold-tint px-5 py-2.5 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-white active:scale-[0.98]"
               >
                 Ask for a quotation
               </Link>
               <a
                 href={telLink(phone)}
-                className="rounded-[4px] border border-hairline bg-surface px-5 py-2.5 text-sm font-medium text-ink transition-colors hover:border-brand hover:text-brand"
+                className="inline-flex items-center gap-2 rounded-lg border border-hairline-strong bg-surface px-5 py-2.5 text-sm font-medium text-ink shadow-[var(--shadow-xs)] transition-colors hover:border-brand hover:text-brand active:scale-[0.98]"
               >
+                <Phone className="h-4 w-4" strokeWidth={2} />
                 Call us
               </a>
             </div>
@@ -188,7 +191,7 @@ export function Home() {
           <div className="flex flex-wrap gap-3">
             <Link
               to="/bulk-order"
-              className="rounded-[4px] bg-gold-bright px-5 py-2.5 text-sm font-semibold text-plum-deep transition-colors hover:bg-white"
+              className="rounded-lg bg-gold-bright px-5 py-2.5 text-sm font-semibold text-plum-deep shadow-[var(--shadow-md)] transition-colors hover:bg-white active:scale-[0.98]"
             >
               Request a quotation
             </Link>
@@ -196,7 +199,7 @@ export function Home() {
               href={whatsappLink(phone, "Hello, I would like a quotation for housekeeping supplies.")}
               target="_blank"
               rel="noreferrer noopener"
-              className="rounded-[4px] border border-white/40 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/10"
+              className="rounded-lg border border-white/40 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/10 active:scale-[0.98]"
             >
               WhatsApp us
             </a>

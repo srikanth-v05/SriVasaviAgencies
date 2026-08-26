@@ -10,23 +10,28 @@
   functional — they appear only on chips and rules that encode a real zone.
 
   The admin ERP uses the same tokens at low saturation: dense financial tables
-  are not the place to spend colour.
+  are not the place to spend colour. The premium layer is spacing, elevation and
+  restraint — not extra hue.
 */
 
 @theme {
   --color-ink: #2a1220;
   --color-ink-soft: #5c4351;
   --color-muted: #8a7480;
-  --color-hairline: #e6d5dc;
-  --color-ground: #fdf6f0;
-  --color-ground-deep: #f6e7dd;
+  --color-faint: #b9a6ae;
+  --color-hairline: #ecdde3;
+  --color-hairline-strong: #e0cbd4;
+  --color-ground: #fdf7f2;
+  --color-ground-deep: #f6e8de;
   --color-surface: #ffffff;
+  --color-surface-2: #fffaf6;
 
   /* Crimson — the primary brand colour */
   --color-brand: #a81243;
   --color-brand-deep: #6d0b2a;
   --color-brand-bright: #d4235c;
   --color-brand-tint: #fce7ee;
+  --color-brand-tint-2: #fbd9e4;
 
   /* Temple gold — the accent */
   --color-gold: #c8890a;
@@ -51,7 +56,17 @@
   --font-sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
 
-  --radius-panel: 4px;
+  --radius-panel: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 18px;
+
+  /* Elevation — warm-tinted shadows so cards lift off the cream ground
+     without the flat grey drop-shadow every AI dashboard reaches for. */
+  --shadow-xs: 0 1px 2px rgba(58, 12, 33, 0.05);
+  --shadow-sm: 0 1px 2px rgba(58, 12, 33, 0.04), 0 2px 6px rgba(58, 12, 33, 0.05);
+  --shadow-md: 0 2px 4px rgba(58, 12, 33, 0.05), 0 8px 20px -6px rgba(58, 12, 33, 0.12);
+  --shadow-lg: 0 12px 32px -8px rgba(58, 12, 33, 0.18), 0 4px 10px -4px rgba(58, 12, 33, 0.1);
+  --shadow-brand: 0 6px 18px -6px rgba(168, 18, 67, 0.42);
 }
 
 @layer base {
@@ -77,6 +92,26 @@
     color: var(--color-ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* A restrained brand-tinted scrollbar rather than the default grey. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-hairline-strong) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--color-hairline-strong);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-faint);
   }
 
   /* The display face is set expanded and tight — stencilled onto a drum. */
@@ -114,11 +149,37 @@
 }
 
 @layer components {
-  /* The panel is the one repeated container: a flat white plate on the ground. */
+  /* The panel is the one repeated container: a white plate that now lifts off
+     the ground with a warm, low shadow. */
   .panel {
     background: var(--color-surface);
     border: 1px solid var(--color-hairline);
     border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* An interactive plate — used for cards that are links or buttons. */
+  .card-interactive {
+    background: var(--color-surface);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-sm);
+    transition:
+      box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 180ms ease;
+  }
+  .card-interactive:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    border-color: var(--color-hairline-strong);
+  }
+
+  /* Frosted surface for sticky headers / top bars. */
+  .surface-glass {
+    background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+    backdrop-filter: saturate(150%) blur(12px);
+    -webkit-backdrop-filter: saturate(150%) blur(12px);
   }
 
   /* Functional zone coding, used on the catalogue. */
@@ -134,6 +195,7 @@
 
   /* Brand banding for full-bleed sections. */
   .brand-band {
+    background-color: var(--color-plum-deep);
     background-image: linear-gradient(135deg, var(--color-plum) 0%, var(--color-brand-deep) 55%, var(--color-brand) 100%);
   }
 
@@ -153,36 +215,46 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--color-muted);
-    margin-bottom: 0.375rem;
+    margin-bottom: 0.4375rem;
   }
 
   .field-input {
     width: 100%;
     background: var(--color-surface);
-    border: 1px solid var(--color-hairline);
-    border-radius: var(--radius-panel);
-    padding: 0.5rem 0.625rem;
+    border: 1px solid var(--color-hairline-strong);
+    border-radius: var(--radius-sm);
+    padding: 0.5625rem 0.75rem;
     font-size: 0.875rem;
     color: var(--color-ink);
-    transition: border-color 120ms ease;
+    transition:
+      border-color 140ms ease,
+      box-shadow 140ms ease,
+      background-color 140ms ease;
+  }
+
+  .field-input::placeholder {
+    color: var(--color-faint);
   }
 
   .field-input:hover {
-    border-color: color-mix(in srgb, var(--color-brand) 40%, var(--color-hairline));
+    border-color: color-mix(in srgb, var(--color-brand) 45%, var(--color-hairline-strong));
   }
 
   .field-input:focus {
     outline: none;
     border-color: var(--color-brand);
-    box-shadow: 0 0 0 3px var(--color-brand-tint);
+    box-shadow: 0 0 0 3.5px var(--color-brand-tint);
   }
 
   .field-input[aria-invalid="true"] {
     border-color: var(--color-danger);
   }
+  .field-input[aria-invalid="true"]:focus {
+    box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--color-danger) 18%, transparent);
+  }
 
   .field-error {
-    margin-top: 0.25rem;
+    margin-top: 0.3125rem;
     font-size: 0.75rem;
     color: var(--color-danger);
   }
@@ -203,14 +275,16 @@
     object-fit: cover;
     object-position: center 22%;
     background: var(--color-plum-deep);
+    box-shadow: var(--shadow-xs);
   }
 }
 
-/* A single orchestrated page-load reveal, rather than effects scattered about. */
+/* A single orchestrated page-load reveal, rather than effects scattered about.
+   Children can opt into a stagger with the delay utilities below. */
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -220,4 +294,57 @@
 
 .rise {
   animation: rise 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.rise-1 {
+  animation: rise 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 60ms;
+}
+.rise-2 {
+  animation: rise 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 120ms;
+}
+.rise-3 {
+  animation: rise 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 180ms;
+}
+
+/* Staggered stat/card grids: each item enters just after the last. */
+.stagger > * {
+  animation: rise 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 40ms; }
+.stagger > *:nth-child(2) { animation-delay: 90ms; }
+.stagger > *:nth-child(3) { animation-delay: 140ms; }
+.stagger > *:nth-child(4) { animation-delay: 190ms; }
+.stagger > *:nth-child(5) { animation-delay: 240ms; }
+.stagger > *:nth-child(6) { animation-delay: 290ms; }
+.stagger > *:nth-child(7) { animation-delay: 340ms; }
+.stagger > *:nth-child(8) { animation-delay: 390ms; }
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Skeleton shimmer for loading states. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-ground-deep);
+  border-radius: var(--radius-sm);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0,
+    color-mix(in srgb, var(--color-surface) 70%, transparent) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.6s infinite;
 }
