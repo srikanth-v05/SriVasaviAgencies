@@ -255,9 +255,14 @@ async function main(): Promise<void> {
     allowZeroValueBilling: false,
   };
 
+  // Re-seeding refreshes the business details but must not destroy anything the
+  // office uploaded. The seal and signature are scans that only exist on this
+  // server, so on an update they are left exactly as they are.
+  const { sealUrl, signatureUrl, ...refreshable } = companyData;
+
   const company = existingCompany
-    ? await prisma.companySettings.update({ where: { id: existingCompany.id }, data: companyData })
-    : await prisma.companySettings.create({ data: companyData });
+    ? await prisma.companySettings.update({ where: { id: existingCompany.id }, data: refreshable })
+    : await prisma.companySettings.create({ data: { ...refreshable, sealUrl, signatureUrl } });
   console.log(`  company settings: ${company.name} (state code ${company.stateCode})`);
 
   // ---------------------------------------------------------------- admin user

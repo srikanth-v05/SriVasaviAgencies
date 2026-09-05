@@ -116,8 +116,14 @@ async function main() {
   const bad = await uploadAsset("seal", Buffer.from("#!/bin/sh\necho hi"), "evil.sh", "application/x-sh");
   check("non-image upload refused", bad.status === 400, bad.json?.message);
 
+  // A bad slot must be rejected *before* multer writes, otherwise every rejected
+  // upload leaves a file on disk that nothing references.
+  const beforeSlot = (await call("GET", "/company/branding-file-count")).json?.data?.files;
   const wrongSlot = await uploadAsset("banner", sealPng, "x.png");
   check("unknown asset slot refused", wrongSlot.status === 400 || wrongSlot.status === 404, `status ${wrongSlot.status}`);
+  const afterSlot = (await call("GET", "/company/branding-file-count")).json?.data?.files;
+  check("a rejected upload leaves no orphan file on disk", beforeSlot === afterSlot,
+    `${beforeSlot} -> ${afterSlot} file(s)`);
 
   const anon = await fetch(`${BASE}/company/branding/seal`, { method: "POST" }).then((r) => r.status);
   check("upload requires auth", anon === 401);

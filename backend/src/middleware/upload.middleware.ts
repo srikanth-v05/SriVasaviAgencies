@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import multer from "multer";
+import type { NextFunction, Request, Response } from "express";
 import { env } from "../config/env";
 import { ValidationError } from "../utils/errors";
 
@@ -25,6 +26,30 @@ const EXTENSION: Record<string, string> = {
   "image/webp": ".webp",
   "image/svg+xml": ".svg",
 };
+
+/** URL segment -> the company-settings column the image fills. */
+export const BRANDING_FIELDS = {
+  logo: "logoUrl",
+  seal: "sealUrl",
+  signature: "signatureUrl",
+} as const;
+
+export type BrandingAsset = keyof typeof BRANDING_FIELDS;
+
+/**
+ * Reject an unknown `:asset` before multer touches the request.
+ *
+ * Multer streams the upload to disk as it parses the body, so a controller that
+ * rejects afterwards has already left a file behind with nothing referencing it.
+ * Checking the slot first means no file is ever written for a bad request.
+ */
+export function requireBrandingAsset(req: Request, _res: Response, next: NextFunction): void {
+  if (!(req.params.asset in BRANDING_FIELDS)) {
+    next(new ValidationError("Unknown branding asset. Expected logo, seal or signature."));
+    return;
+  }
+  next();
+}
 
 export function ensureStorageDirs(): void {
   fs.mkdirSync(BRANDING_DIR, { recursive: true });
@@ -56,6 +81,15 @@ export const uploadBrandingImage = multer({
     callback(null, true);
   },
 }).single("file");
+
+/** Number of files currently in the branding directory. */
+export function brandingFileCount(): number {
+  try {
+    return fs.readdirSync(BRANDING_DIR).length;
+  } catch {
+    return 0;
+  }
+}
 
 /** Public URL for a stored branding file. */
 export function brandingUrl(filename: string): string {

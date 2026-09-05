@@ -242,8 +242,25 @@ above `Authorised Signatory`, with the declaration text just above them.
 Both are optional — with neither uploaded the block leaves blank space to sign by
 hand, which is what it did before.
 
-Files are stored under `STORAGE_DIR/branding` and served read-only from
-`/uploads`. A few details worth knowing:
+### What lives in `STORAGE_DIR`
+
+Only uploaded branding images — the logo, the rubber stamp and the signature.
+Nothing else: no invoices, no PDFs, no backups, no logs. PDFs are generated on
+demand and streamed straight to the browser, never written to disk.
+
+```
+backend/storage/
+└── branding/
+    ├── 3f2a…-….png   ← logo
+    ├── 8b41…-….png   ← rubber stamp
+    └── c67f…-….png   ← signature
+```
+
+At most three files, one per slot. Filenames are generated UUIDs, so the
+directory is opaque — the mapping to logo/seal/signature lives in
+`company_settings`. The folder is gitignored; it is runtime data, not source.
+
+A few details worth knowing:
 
 - The stored filename is generated server-side, never taken from the client, so
   an upload cannot escape the directory or overwrite anything.
@@ -251,6 +268,12 @@ Files are stored under `STORAGE_DIR/branding` and served read-only from
   up with every re-scan of a signature.
 - The PDF renderer only reads paths under `STORAGE_DIR`, and a corrupt image is
   logged and skipped rather than breaking the whole document.
+- A rejected upload writes nothing. The asset slot is validated before the file
+  is parsed, because multer streams to disk as it reads the body — so a
+  controller that rejected afterwards used to leave an orphan behind.
+- Re-running the seed refreshes the business details but leaves the seal and
+  signature alone. They are scans that exist only on this server, so a routine
+  re-seed must not destroy them.
 - `STORAGE_DIR` is local disk. On a host with an ephemeral filesystem, point it
   at a mounted volume or the images vanish on redeploy.
 

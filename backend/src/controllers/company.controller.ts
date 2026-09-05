@@ -2,15 +2,8 @@ import { Request, Response } from "express";
 import { CompanyService } from "../services/company.service";
 import { ApiResponse } from "../utils/response";
 import { ValidationError } from "../utils/errors";
-import { brandingUrl } from "../middleware/upload.middleware";
+import { brandingUrl, brandingFileCount, BRANDING_FIELDS, type BrandingAsset } from "../middleware/upload.middleware";
 import { serialize } from "../utils/serialize";
-
-/** URL segment -> the settings column it writes to. */
-const ASSET_FIELDS: Record<string, "logoUrl" | "sealUrl" | "signatureUrl" | undefined> = {
-  logo: "logoUrl",
-  seal: "sealUrl",
-  signature: "signatureUrl",
-};
 
 const LABELS: Record<string, string> = { logo: "Logo", seal: "Seal", signature: "Signature" };
 
@@ -36,17 +29,21 @@ export class CompanyController {
    * logo, the rubber stamp, or the authorised signature.
    */
   uploadBranding = async (req: Request, res: Response) => {
-    const field = ASSET_FIELDS[req.params.asset];
-    if (!field) throw new ValidationError("Unknown branding asset");
+    // The route guard has already checked the slot.
+    const field = BRANDING_FIELDS[req.params.asset as BrandingAsset];
     if (!req.file) throw new ValidationError("Choose an image to upload");
 
     const settings = await this.companyService.setBrandingAsset(field, brandingUrl(req.file.filename));
     return ApiResponse.success(res, serialize(settings), `${LABELS[req.params.asset]} uploaded`);
   };
 
+  /** How many files the branding directory holds — used to assert no orphans. */
+  brandingFileCount = async (_req: Request, res: Response) => {
+    return ApiResponse.success(res, { files: brandingFileCount() });
+  };
+
   removeBranding = async (req: Request, res: Response) => {
-    const field = ASSET_FIELDS[req.params.asset];
-    if (!field) throw new ValidationError("Unknown branding asset");
+    const field = BRANDING_FIELDS[req.params.asset as BrandingAsset];
 
     const settings = await this.companyService.setBrandingAsset(field, null);
     return ApiResponse.success(res, serialize(settings), `${LABELS[req.params.asset]} removed`);
