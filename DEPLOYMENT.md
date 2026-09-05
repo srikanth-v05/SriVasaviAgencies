@@ -54,17 +54,21 @@ parse wrongly.
 | Setting | Value |
 |---|---|
 | Root directory | *(leave blank — it is a monorepo)* |
-| Build command | `npm ci && npm run build --workspace=backend && npm run prisma:deploy --workspace=backend` |
+| Build command | `npm ci --include=dev && npm run build --workspace=backend && npm run prisma:deploy --workspace=backend` |
 | Start command | `npm run start --workspace=backend` |
 | Health check path | `/health` |
 
 Migrations run in the build step, so they finish before the new instance takes
 traffic.
 
-**Use `npm ci`, not `npm install`.** `ci` installs exactly what
-`package-lock.json` pins; `install` is free to resolve newer versions. That
-difference is how a TypeScript major version landed on a deploy and failed the
-build with a config that compiles fine locally.
+**Use `npm ci --include=dev`.** Two things are going on:
+
+- `ci` installs exactly what `package-lock.json` pins; `install` may resolve
+  newer versions.
+- `--include=dev` is required because `NODE_ENV=production` is set for the
+  running service, and npm reads it at install time too — skipping every
+  devDependency, which is where TypeScript, prisma and all the `@types` live.
+  Without the flag the build has no compiler and no type declarations.
 
 ### Environment variables
 

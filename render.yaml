@@ -10,10 +10,14 @@ services:
     region: singapore
     rootDir: .
     # Migrations run at build, before the new instance takes traffic.
-    # `npm ci` installs exactly what package-lock.json pins. `npm install` is
-    # free to resolve newer versions, which is how a TypeScript major landed on
-    # a deploy and broke the build with a config that compiled fine locally.
-    buildCommand: npm ci && npm run build --workspace=backend && npm run prisma:deploy --workspace=backend
+    # `npm ci` installs exactly what package-lock.json pins; `npm install` is
+    # free to resolve newer versions.
+    #
+    # `--include=dev` is not optional here. NODE_ENV=production is set below for
+    # the running service, and npm reads it at install time too, skipping every
+    # devDependency — which is where TypeScript, prisma and all the @types live.
+    # Without this the build has no compiler and no type declarations.
+    buildCommand: npm ci --include=dev && npm run build --workspace=backend && npm run prisma:deploy --workspace=backend
     startCommand: npm run start --workspace=backend
     healthCheckPath: /health
     envVars:
