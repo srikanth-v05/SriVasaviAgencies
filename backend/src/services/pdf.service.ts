@@ -149,7 +149,11 @@ export class PdfService {
     const addressLines = [
       company.addressLine1,
       company.addressLine2,
-      `${company.city} ${company.pincode}, ${company.state}`,
+      // Puducherry is both a city and a union territory, so printing both would
+      // repeat the word. Only add the state when it differs from the city.
+      company.state.trim().toLowerCase() === company.city.trim().toLowerCase()
+        ? `${company.city} ${company.pincode}`
+        : `${company.city} ${company.pincode}, ${company.state}`,
       `Phone: ${company.phone}  |  Email: ${company.email}`,
       company.gstin ? `GSTIN: ${company.gstin}` : null,
     ].filter(Boolean) as string[];

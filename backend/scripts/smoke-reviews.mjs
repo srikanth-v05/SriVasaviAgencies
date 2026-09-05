@@ -36,7 +36,8 @@ async function main() {
   check("company state is Puducherry (34)", c.stateCode === "34" && c.state === "Puducherry", `${c.state} / ${c.stateCode}`);
   check("both phone numbers stored", c.phone.includes("99436 77409") && c.alternatePhone.includes("90928 97386"),
     `${c.phone} · ${c.alternatePhone}`);
-  check("address updated", c.addressLine1.includes("Villupuram Main Road") && c.addressLine2.includes("Villianur") && c.pincode === "605110",
+  // The address as printed on the business's own tax invoice.
+  check("address matches the invoice", c.addressLine1.includes("West Car Street") && c.addressLine2.includes("Villianur") && c.pincode === "605110",
     `${c.addressLine1}, ${c.addressLine2}, ${c.pincode}`);
   check("logo set", c.logoUrl === "/logo.jpg", c.logoUrl);
 

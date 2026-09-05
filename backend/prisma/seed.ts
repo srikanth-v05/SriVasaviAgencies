@@ -212,8 +212,9 @@ async function main(): Promise<void> {
     gstin: "34AGLPV5711E1ZC",
     // The PAN sits inside the GSTIN at characters 3-12.
     pan: "AGLPV5711E",
-    addressLine1: "No. 1, Villupuram Main Road",
-    addressLine2: "Sundara Murthi Vinayaga Puram, Villianur",
+    // As printed on the business's own tax invoice.
+    addressLine1: "No. 54, West Car Street",
+    addressLine2: "Villianur",
     city: "Puducherry",
     // Puducherry is GST state code 34. This decides CGST+SGST vs IGST on every
     // invoice, so it must match the GST registration certificate.

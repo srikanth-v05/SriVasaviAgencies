@@ -77,9 +77,9 @@ export function Contact() {
               </>
             ) : (
               <>
-                No. 1, Villupuram Main Road
+                No. 54, West Car Street
                 <br />
-                Sundara Murthi Vinayaga Puram, Villianur
+                Villianur
                 <br />
                 Puducherry 605110
               </>
