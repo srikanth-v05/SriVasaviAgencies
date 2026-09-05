@@ -54,12 +54,17 @@ parse wrongly.
 | Setting | Value |
 |---|---|
 | Root directory | *(leave blank — it is a monorepo)* |
-| Build command | `npm install && npm run build --workspace=backend && npm run prisma:deploy --workspace=backend` |
+| Build command | `npm ci && npm run build --workspace=backend && npm run prisma:deploy --workspace=backend` |
 | Start command | `npm run start --workspace=backend` |
 | Health check path | `/health` |
 
 Migrations run in the build step, so they finish before the new instance takes
 traffic.
+
+**Use `npm ci`, not `npm install`.** `ci` installs exactly what
+`package-lock.json` pins; `install` is free to resolve newer versions. That
+difference is how a TypeScript major version landed on a deploy and failed the
+build with a config that compiles fine locally.
 
 ### Environment variables
 

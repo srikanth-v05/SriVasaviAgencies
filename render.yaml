@@ -10,7 +10,10 @@ services:
     region: singapore
     rootDir: .
     # Migrations run at build, before the new instance takes traffic.
-    buildCommand: npm install && npm run build --workspace=backend && npm run prisma:deploy --workspace=backend
+    # `npm ci` installs exactly what package-lock.json pins. `npm install` is
+    # free to resolve newer versions, which is how a TypeScript major landed on
+    # a deploy and broke the build with a config that compiled fine locally.
+    buildCommand: npm ci && npm run build --workspace=backend && npm run prisma:deploy --workspace=backend
     startCommand: npm run start --workspace=backend
     healthCheckPath: /health
     envVars:
