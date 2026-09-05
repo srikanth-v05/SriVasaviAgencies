@@ -22,7 +22,8 @@ npm run db:create                 # creates the schema with a case-insensitive c
 cd backend
 cp .env.example .env              # then set JWT_SECRET and REFRESH_TOKEN_SECRET
 npx prisma migrate deploy         # or: npx prisma migrate dev
-npm run seed                      # company settings, masters, 12 products, sample customers
+npm run seed                      # company settings, admin user, units, categories, GST rates
+npm run seed:demo                 # optional: sample products and customers to try it out
 cd ..
 
 npm run dev                       # API on :4000, website on :5173
@@ -53,6 +54,8 @@ npm run typecheck      # TypeScript across both
 npm test               # backend unit tests (GST engine, money, financial year)
 
 cd backend
+npm run seed:demo      # sample catalogue — the smoke tests need products to bill
+npm run db:clean-demo  # strip every customer, product, quotation, invoice and payment
 npm run smoke          # end-to-end business flow against a running API + database
 npm run smoke:reviews  # GST state treatment, contact details and the reviews module
 npm run smoke:numbering # concurrent invoice numbering (CONCURRENCY=40 to push it)
@@ -122,6 +125,27 @@ drafts leave no gaps in the issued sequence.
 SVA/QT/2026-27/0001    quotations
 SVA/2026-27/0001       invoices
 ```
+
+## Real data vs sample data
+
+The main seed sets up only what the system needs before anyone can trade — the
+company details, an administrator, and the structural masters (units, categories,
+GST rates). It creates **no products and no customers**: those are real business
+records, and a catalogue of invented prices is something somebody could bill by
+accident.
+
+| Command | What it does |
+|---|---|
+| `npm run seed` | Real setup. Safe on a live system; never overwrites an uploaded seal or signature |
+| `npm run seed:demo` | Adds a sample catalogue and fictional customers, for trying things out |
+| `npm run db:clean-demo` | Removes every customer, product, quotation, invoice, payment, enquiry and audit row, and resets numbering to 0001 |
+
+`db:clean-demo` keeps the company settings, the uploaded branding, the users and
+the masters. It refuses to run when issued invoices exist — those carry a number
+and are tax records — unless `CONFIRM_CLEAN_DEMO=yes` is set.
+
+**The smoke tests write real rows.** They create customers and issue invoices, so
+run them against a development database, not a live one.
 
 ## Database: TiDB
 

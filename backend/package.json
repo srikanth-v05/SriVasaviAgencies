@@ -19,7 +19,9 @@
     "smoke": "node scripts/smoke.mjs",
     "smoke:reviews": "node scripts/smoke-reviews.mjs",
     "smoke:numbering": "node scripts/smoke-numbering.mjs",
-    "smoke:branding": "node scripts/smoke-branding.mjs"
+    "smoke:branding": "node scripts/smoke-branding.mjs",
+    "db:clean-demo": "tsx prisma/clean-demo.ts",
+    "seed:demo": "tsx prisma/seed-demo.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
