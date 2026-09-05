@@ -7,11 +7,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://REPLACE-WITH-YOUR-RENDER-SERVICE.onrender.com/api/:path*"
+      "destination": "https://sva-api-8nhm.onrender.com/api/:path*"
     },
     {
       "source": "/uploads/:path*",
-      "destination": "https://REPLACE-WITH-YOUR-RENDER-SERVICE.onrender.com/uploads/:path*"
+      "destination": "https://sva-api-8nhm.onrender.com/uploads/:path*"
     },
     {
       "source": "/(.*)",
