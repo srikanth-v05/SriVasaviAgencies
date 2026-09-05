@@ -13,10 +13,19 @@ const REFRESH_COOKIE = "sva_refresh";
  * body for non-browser API clients.
  */
 function cookieOptions() {
+  // "strict" is right when the site and API share an origin, which is the
+  // default deployment (Vercel rewrites /api through to the backend).
+  //
+  // If the browser calls the backend on another host, a strict cookie is simply
+  // never sent — login would appear to work and then the session would die at
+  // the first refresh. That setup needs COOKIE_SAMESITE=none, which browsers
+  // only honour on a secure cookie.
+  const sameSite = env.COOKIE_SAMESITE;
+
   return {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: "strict" as const,
+    secure: isProduction || sameSite === "none",
+    sameSite,
     path: "/api/v1/auth",
     maxAge: env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
   };

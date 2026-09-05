@@ -1,0 +1,52 @@
+# Render blueprint for the API.
+#
+# The frontend is not here — it goes to Vercel, which rewrites /api and /uploads
+# through to this service so the browser sees a single origin.
+services:
+  - type: web
+    name: sva-api
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: .
+    # Migrations run at build, before the new instance takes traffic.
+    buildCommand: npm install && npm run build --workspace=backend && npm run prisma:deploy --workspace=backend
+    startCommand: npm run start --workspace=backend
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "20"
+      # TiDB Cloud connection string. TLS is required.
+      #   mysql://<user>:<pass>@<host>:4000/sva_erp?sslaccept=strict
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: REFRESH_TOKEN_SECRET
+        generateValue: true
+      - key: ACCESS_TOKEN_TTL
+        value: 15m
+      - key: REFRESH_TOKEN_TTL_DAYS
+        value: "7"
+      # Your Vercel URL. Only needed if the browser calls this service directly;
+      # with the Vercel rewrite the request arrives same-origin.
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # "strict" suits the Vercel-rewrite setup. Use "none" only if the browser
+      # calls this host directly from another origin.
+      - key: COOKIE_SAMESITE
+        value: strict
+      - key: LOG_LEVEL
+        value: info
+      # Uploaded seal and signature. Must point at the mounted disk below —
+      # Render's normal filesystem is wiped on every deploy.
+      - key: STORAGE_DIR
+        value: /var/data/storage
+    # A disk is what keeps the seal and signature alive across deploys.
+    # Comment this out on the free plan, and re-upload branding after each deploy.
+    disk:
+      name: sva-storage
+      mountPath: /var/data
+      sizeGB: 1

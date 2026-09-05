@@ -328,6 +328,12 @@ The reviews section stays hidden on the website until there is something real to
 show. Adding the Google Maps and JustDial listing URLs in Company settings also
 puts "Read every review on…" buttons on the page.
 
+## Deploying
+
+Vercel for the website, Render for the API, TiDB Cloud for the database —
+step by step in [DEPLOYMENT.md](DEPLOYMENT.md), including the two settings that
+silently break sessions if you get them wrong.
+
 ## Before production
 
 - [ ] Change the seeded admin password, and set real secrets in `.env`

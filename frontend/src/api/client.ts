@@ -1,6 +1,16 @@
 import type { Pagination } from "@/types";
 
-const BASE_URL = "/api/v1";
+/**
+ * Where the API lives.
+ *
+ * Left unset, calls go to /api/v1 on the same origin — which is how both the dev
+ * server (Vite proxy) and the Vercel deployment work, because Vercel rewrites
+ * /api/* through to Render. Same-origin keeps the refresh-token cookie simple.
+ *
+ * Set VITE_API_URL to a full origin to call the backend directly instead; the
+ * backend then needs that origin in ALLOWED_ORIGINS and COOKIE_SAMESITE=none.
+ */
+const BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "") ?? "/api/v1";
 const ACCESS_TOKEN_KEY = "sva_access_token";
 
 export interface ApiEnvelope<T> {

@@ -12,6 +12,8 @@ const envSchema = z.object({
   ALLOWED_ORIGINS: z.string().default("http://localhost:5173"),
   LOG_LEVEL: z.string().default("info"),
   STORAGE_DIR: z.string().default("./storage"),
+  /// "none" is required when the browser calls the API on a different host.
+  COOKIE_SAMESITE: z.enum(["strict", "lax", "none"]).default("strict"),
   PUBLIC_BASE_URL: z.string().default("http://localhost:4000"),
   /// Optional. Set together with a Google Place ID to enable review sync.
   GOOGLE_PLACES_API_KEY: z.string().optional(),
