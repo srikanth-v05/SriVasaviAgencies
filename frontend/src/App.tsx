@@ -30,6 +30,7 @@ import { ReportsGst } from "@/pages/admin/ReportsGst";
 import { SettingsCompany } from "@/pages/admin/SettingsCompany";
 import { SettingsUsers } from "@/pages/admin/SettingsUsers";
 import { SettingsReviews } from "@/pages/admin/SettingsReviews";
+import { SettingsBranding } from "@/pages/admin/SettingsBranding";
 import { AuditLogs } from "@/pages/admin/AuditLogs";
 
 /** Route structure follows architecture.md §25. */
@@ -85,6 +86,7 @@ export function App() {
         <Route path="reports/gst" element={<Guard permission="reports:read" element={<ReportsGst />} />} />
 
         <Route path="settings/company" element={<Guard permission="company:manage" element={<SettingsCompany />} />} />
+        <Route path="settings/branding" element={<Guard permission="company:manage" element={<SettingsBranding />} />} />
         <Route path="settings/reviews" element={<Guard permission="company:manage" element={<SettingsReviews />} />} />
         <Route path="settings/users" element={<Guard permission="users:manage" element={<SettingsUsers />} />} />
         <Route path="audit-logs" element={<Guard permission="audit:read" element={<AuditLogs />} />} />

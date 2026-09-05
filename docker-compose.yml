@@ -1,16 +1,20 @@
 services:
-  # TiDB in standalone mode (unistore) — enough for local development.
-  # Production uses TiDB Cloud; only the connection string differs.
+  # TiDB in standalone mode — enough for local development. Production points at
+  # TiDB Cloud, where only the connection string differs.
+  #
+  # `--path` gives unistore a directory to persist into, and the named volume
+  # keeps it across `docker compose down` and Docker Desktop restarts. Without
+  # both, every restart came back with an empty database.
   tidb:
     image: pingcap/tidb:v8.1.0
     container_name: sva_tidb
     restart: unless-stopped
     command:
       - --store=unistore
-      - --path=""
+      - --path=/tidb-data
       - --host=0.0.0.0
-      # Case-insensitive search depends on the collation framework being on.
-      - --config=/dev/null
+    volumes:
+      - tidb_data:/tidb-data
     ports:
       - "4100:4000"
     healthcheck:
@@ -18,3 +22,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+
+volumes:
+  tidb_data:

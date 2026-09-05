@@ -11,6 +11,7 @@ import {
   FileSpreadsheet,
   Building2,
   Star,
+  Stamp,
   ShieldCheck,
   ScrollText,
   LogOut,
@@ -59,6 +60,7 @@ const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
     heading: "Administration",
     items: [
       { to: "/admin/settings/company", label: "Company settings", permission: "company:manage", icon: Building2 },
+      { to: "/admin/settings/branding", label: "Seal & signature", permission: "company:manage", icon: Stamp },
       { to: "/admin/settings/reviews", label: "Website reviews", permission: "company:manage", icon: Star },
       { to: "/admin/settings/users", label: "Users", permission: "users:manage", icon: ShieldCheck },
       { to: "/admin/audit-logs", label: "Audit logs", permission: "audit:read", icon: ScrollText },

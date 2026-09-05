@@ -18,13 +18,15 @@
     "seed": "tsx prisma/seed.ts",
     "smoke": "node scripts/smoke.mjs",
     "smoke:reviews": "node scripts/smoke-reviews.mjs",
-    "smoke:numbering": "node scripts/smoke-numbering.mjs"
+    "smoke:numbering": "node scripts/smoke-numbering.mjs",
+    "smoke:branding": "node scripts/smoke-branding.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@types/multer": "^2.2.0",
     "argon2": "^0.41.1",
     "compression": "^1.7.5",
     "cookie-parser": "^1.4.7",
@@ -35,6 +37,7 @@
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.3.0",
     "pdfkit": "^0.15.1",
     "pino": "^9.5.0",
     "pino-http": "^10.3.0",

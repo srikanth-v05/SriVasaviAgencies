@@ -2,6 +2,7 @@ import { CompanySettings, Prisma } from "@prisma/client";
 import { CompanyRepository } from "../repositories/company.repository";
 import { AuditService, AuditAction } from "./audit.service";
 import { NotFoundError } from "../utils/errors";
+import { removeBrandingFile } from "../middleware/upload.middleware";
 import type { PrismaTransaction } from "../db/prisma";
 
 /**
@@ -53,9 +54,38 @@ export class CompanyService {
   }
 
   async setLogo(logoUrl: string): Promise<CompanySettings> {
-    const updated = await this.companyRepository.update({ logoUrl });
+    return this.setBrandingAsset("logoUrl", logoUrl);
+  }
+
+  /**
+   * Store the URL of a branding image — logo, rubber stamp or signature.
+   *
+   * Replacing one deletes the file it replaced, and passing null clears the
+   * setting, so the storage directory does not accumulate orphans every time
+   * somebody re-scans their signature.
+   */
+  async setBrandingAsset(
+    field: "logoUrl" | "sealUrl" | "signatureUrl",
+    url: string | null,
+  ): Promise<CompanySettings> {
+    const current = await this.companyRepository.get();
+    if (!current) throw new NotFoundError("Company settings have not been configured yet");
+
+    const previous = current[field];
+
+    const updated = await this.companyRepository.update({ [field]: url });
     if (!updated) throw new NotFoundError("Company settings have not been configured yet");
+
+    if (previous && previous !== url) removeBrandingFile(previous);
+
     this.cache = updated;
+    await this.auditService.record(AuditAction.UPDATE_COMPANY_SETTINGS, {
+      entityType: "CompanySettings",
+      entityId: updated.id,
+      oldValues: { [field]: previous },
+      newValues: { [field]: url },
+    });
+
     return updated;
   }
 

@@ -163,6 +163,14 @@ model CompanySettings {
   /// Set alongside GOOGLE_PLACES_API_KEY to enable automatic review sync.
   googlePlaceId String?
 
+  /// Rubber stamp and authorised signature, printed together in the signature
+  /// block of every quotation and invoice. The seal sits behind, the signature
+  /// on top of it, matching how the documents are signed by hand.
+  sealUrl      String?
+  signatureUrl String?
+  /// Printed above the signature block. GST invoices carry a declaration.
+  declaration  String? @db.Text
+
   bankName          String?
   bankAccountName   String?
   bankAccountNumber String?

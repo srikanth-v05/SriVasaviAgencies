@@ -4,6 +4,7 @@ import { authenticate, requirePermission } from "../middleware/auth.middleware";
 import { validate } from "../middleware/validate.middleware";
 import { asyncHandler } from "../middleware/error-handler";
 import { loginRateLimiter, enquiryRateLimiter, publicRateLimiter } from "../middleware/rate-limit.middleware";
+import { uploadBrandingImage } from "../middleware/upload.middleware";
 import * as s from "../types/schemas";
 
 import type { AuthController } from "../controllers/auth.controller";
@@ -75,6 +76,14 @@ export function buildRouter(): Router {
   router.get("/company", requirePermission("dashboard:read"), asyncHandler(company.get));
   router.put("/company", requirePermission("company:manage"), validate(s.companySchema), asyncHandler(company.save));
   router.post("/company/logo", requirePermission("company:manage"), asyncHandler(company.setLogo));
+  // Branding images: :asset is one of logo | seal | signature.
+  router.post(
+    "/company/branding/:asset",
+    requirePermission("company:manage"),
+    uploadBrandingImage,
+    asyncHandler(company.uploadBranding),
+  );
+  router.delete("/company/branding/:asset", requirePermission("company:manage"), asyncHandler(company.removeBranding));
 
   // ------------------------------------------------------------------ users
   router.get("/users", requirePermission("users:manage"), asyncHandler(users.list));

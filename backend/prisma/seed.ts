@@ -207,9 +207,11 @@ async function main(): Promise<void> {
     name: "Sri Vasavi Agencies",
     tradeName: "Sri Vasavi Agencies",
     legalName: "Sri Vasavi Agencies",
-    // Replace with the GSTIN on the registration certificate before issuing invoices.
-    gstin: null,
-    pan: null,
+    // From the business's own tax invoice. State code 34 = Puducherry, which is
+    // what decides CGST+SGST vs IGST on every document.
+    gstin: "34AGLPV5711E1ZC",
+    // The PAN sits inside the GSTIN at characters 3-12.
+    pan: "AGLPV5711E",
     addressLine1: "No. 1, Villupuram Main Road",
     addressLine2: "Sundara Murthi Vinayaga Puram, Villianur",
     city: "Puducherry",
@@ -226,10 +228,10 @@ async function main(): Promise<void> {
     googleMapsUrl: null,
     justdialUrl: null,
     googlePlaceId: null,
-    bankName: null,
-    bankAccountName: "Sri Vasavi Agencies",
-    bankAccountNumber: null,
-    bankIfsc: null,
+    bankName: "Karur Vysya Bank",
+    bankAccountName: "SRI VASAVI AGENCIES",
+    bankAccountNumber: "1710135000000481",
+    bankIfsc: "KVBL0001710",
     bankBranch: null,
     upiId: null,
     quotationPrefix: "SVA/QT",
@@ -242,6 +244,12 @@ async function main(): Promise<void> {
       "2. Interest at 18% p.a. on overdue amounts.",
       "3. Disputes subject to Puducherry jurisdiction.",
     ].join("\n"),
+    // Printed above the signature block, as on the paper invoice.
+    declaration:
+      "We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.",
+    // Uploaded from Settings -> Seal & signature; blank leaves room to sign by hand.
+    sealUrl: null,
+    signatureUrl: null,
     roundingMode: "NEAREST_RUPEE" as const,
     allowZeroValueBilling: false,
   };

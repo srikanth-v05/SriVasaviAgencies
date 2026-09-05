@@ -21,6 +21,9 @@ coverage/
 tmp/
 temp/
 
+# Uploaded files (logo, seal, signature) — runtime data, not source
+backend/storage/
+
 # Local databases and generated Prisma files
 *.db
 *.sqlite

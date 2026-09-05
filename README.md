@@ -56,6 +56,7 @@ cd backend
 npm run smoke          # end-to-end business flow against a running API + database
 npm run smoke:reviews  # GST state treatment, contact details and the reviews module
 npm run smoke:numbering # concurrent invoice numbering (CONCURRENCY=40 to push it)
+npm run smoke:branding # seal and signature upload, and their place in the PDF
 npm run prisma:studio  # browse the database
 ```
 
@@ -224,11 +225,42 @@ raises the indent can match chemical to zone without reading a datasheet.
 | End-to-end | `cd backend && npm run smoke` | Login → customer → quotation with overrides → PDF → accept → convert → edit → issue → payments → reports → Excel → audit |
 | Reviews & GST state | `cd backend && npm run smoke:reviews` | Home-state vs out-of-state tax treatment, contact details, review CRUD, publish/unpublish, Google sync guard, simultaneous logins |
 | Numbering under load | `cd backend && npm run smoke:numbering` | Concurrent invoice finalisation: unique, gapless numbers, no lost writes |
+| Seal & signature | `cd backend && npm run smoke:branding` | Upload, storage, PDF embedding, replacement cleanup, removal, auth |
 
 The smoke script needs a running API and database. It asserts the worked examples
 from architecture.md directly — ₹10,000 at 18% splitting into CGST ₹900 + SGST
 ₹900, the same figure as IGST ₹1,800 inter-state, and 50 × ₹85 = ₹4,250 on an
 overridden line.
+
+## Seal and signature on documents
+
+Invoices are signed the way the paper ones were: the rubber stamp goes down
+first and the signature over the top of it. Upload both at **Settings → Seal &
+signature** and they print in the signature block of every quotation and invoice,
+above `Authorised Signatory`, with the declaration text just above them.
+
+Both are optional — with neither uploaded the block leaves blank space to sign by
+hand, which is what it did before.
+
+Files are stored under `STORAGE_DIR/branding` and served read-only from
+`/uploads`. A few details worth knowing:
+
+- The stored filename is generated server-side, never taken from the client, so
+  an upload cannot escape the directory or overwrite anything.
+- Replacing an image deletes the one it replaced, so the directory does not fill
+  up with every re-scan of a signature.
+- The PDF renderer only reads paths under `STORAGE_DIR`, and a corrupt image is
+  logged and skipped rather than breaking the whole document.
+- `STORAGE_DIR` is local disk. On a host with an ephemeral filesystem, point it
+  at a mounted volume or the images vanish on redeploy.
+
+### PDF typography
+
+The document embeds IBM Plex Sans (`backend/assets/fonts`) rather than relying
+on the PDF base-14 fonts. Non-embedded Helvetica is substituted by whatever the
+reader has, which reflowed glyphs and opened gaps mid-word in readers without
+real Helvetica metrics. An invoice gets emailed and printed on machines nobody
+here controls, so it carries its own type.
 
 ## Reviews
 
@@ -259,6 +291,8 @@ puts "Read every review on…" buttons on the page.
 - [ ] Serve over HTTPS, set `ALLOWED_ORIGINS` to the real domain
 - [ ] Point `DATABASE_URL` at TiDB Cloud (with `sslaccept=strict`), and create the schema with `utf8mb4_general_ci`
 - [ ] Confirm TiDB Cloud backups are enabled and test a restore
+- [ ] Upload the rubber stamp and signature at Settings → Seal & signature, and check a test invoice PDF before sending one to a customer
+- [ ] Point `STORAGE_DIR` at persistent storage — uploaded branding images live on disk, not in the database
 - [ ] Object storage for the company logo and any archived PDFs
 
 ## Not included

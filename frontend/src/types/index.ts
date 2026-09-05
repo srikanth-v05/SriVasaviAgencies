@@ -257,6 +257,10 @@ export interface CompanySettings {
   googleMapsUrl: string | null;
   justdialUrl: string | null;
   googlePlaceId: string | null;
+  /** Rubber stamp and authorised signature printed on documents. */
+  sealUrl: string | null;
+  signatureUrl: string | null;
+  declaration: string | null;
   bankName: string | null;
   bankAccountName: string | null;
   bankAccountNumber: string | null;

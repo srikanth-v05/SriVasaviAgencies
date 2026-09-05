@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
-import { api, type ApiEnvelope } from "@/api/client";
+import { api, getAccessToken, type ApiEnvelope } from "@/api/client";
 import type {
   AuditLog,
   Category,
@@ -436,5 +436,52 @@ export function useSyncGoogleReviews() {
   return useMutation({
     mutationFn: () => api.post<{ imported: number; total: number }>("/reviews-sync/google").then(unwrap),
     onSuccess: () => invalidateReviews(client),
+  });
+}
+
+/* ---------------------------------------------------------------- branding */
+
+export type BrandingAsset = "logo" | "seal" | "signature";
+
+/**
+ * Branding images are multipart uploads, so they bypass the JSON api helper and
+ * post a FormData body directly — the browser must set its own multipart
+ * boundary, which means no Content-Type header of our own.
+ */
+export function useUploadBranding() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ asset, file }: { asset: BrandingAsset; file: File }) => {
+      const body = new FormData();
+      body.append("file", file);
+
+      const response = await fetch(`/api/v1/company/branding/${asset}`, {
+        method: "POST",
+        credentials: "include",
+        headers: getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {},
+        body,
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || payload?.status === "error") {
+        throw new Error(payload?.message ?? "Upload failed");
+      }
+      return payload.data as CompanySettings;
+    },
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.company });
+      void client.invalidateQueries({ queryKey: keys.publicCompany });
+    },
+  });
+}
+
+export function useRemoveBranding() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (asset: BrandingAsset) => api.delete<CompanySettings>(`/company/branding/${asset}`).then(unwrap),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.company });
+      void client.invalidateQueries({ queryKey: keys.publicCompany });
+    },
   });
 }
