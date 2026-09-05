@@ -42,6 +42,14 @@ fifteen minutes after they sign in.
 If the password contains `@`, `/`, `:` or `#`, percent-encode it or the URL will
 parse wrongly.
 
+**Test the string before pasting it into Render**, using Prisma's own engine —
+this catches both a missing `sslaccept=strict` and the classic mistake of
+pasting the value into Render's dashboard with the shell quotes still attached:
+
+```bash
+DATABASE_URL="mysql://user:pass@host:4000/sva_erp?sslaccept=strict"   npm run check:database-url --workspace=backend
+```
+
 ---
 
 ## 2. API — Render
@@ -204,6 +212,7 @@ first refresh, fifteen minutes later.
 | Seal and signature vanished after a deploy | No Render disk; `STORAGE_DIR` is on the ephemeral filesystem |
 | First request each morning takes ~50s | Free plan cold start |
 | `P1001: can't reach database` | `sslaccept=strict` missing, or the TiDB Cloud IP allowlist |
+| `insecure transport are prohibited` | `?sslaccept=strict` is missing from `DATABASE_URL` on Render — see below |
 | Searching "phenyl" misses "White Phenyl" | Database created without `utf8mb4_general_ci` |
 
 ---
