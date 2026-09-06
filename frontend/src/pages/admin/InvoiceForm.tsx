@@ -35,6 +35,8 @@ export function InvoiceForm() {
         paymentTerms: payload.paymentTerms || null,
         notes: payload.notes || null,
         termsAndConditions: payload.termsAndConditions || null,
+        poNumber: payload.poNumber || null,
+        vehicleNumber: payload.vehicleNumber || null,
         items: payload.items,
       });
       toast.success(isEdit ? "Invoice updated" : "Draft invoice created");
@@ -68,6 +70,8 @@ export function InvoiceForm() {
                 notes: invoice.notes,
                 termsAndConditions: invoice.termsAndConditions,
                 paymentTerms: invoice.paymentTerms,
+                poNumber: invoice.poNumber,
+                vehicleNumber: invoice.vehicleNumber,
                 items: invoice.items,
               }
             : undefined

@@ -248,6 +248,18 @@ export function InvoiceDetail() {
               {money(invoice.balanceDue)}
             </p>
           </div>
+          {invoice.poNumber && (
+            <div>
+              <p className="type-eyebrow text-[10px]">PO number</p>
+              <p className="type-data mt-1.5 text-sm text-ink">{invoice.poNumber}</p>
+            </div>
+          )}
+          {invoice.vehicleNumber && (
+            <div>
+              <p className="type-eyebrow text-[10px]">Vehicle number</p>
+              <p className="type-data mt-1.5 text-sm text-ink">{invoice.vehicleNumber}</p>
+            </div>
+          )}
         </div>
       </Panel>
 

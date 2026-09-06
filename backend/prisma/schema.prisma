@@ -427,6 +427,10 @@ model Invoice {
   paymentTerms           String?
   notes                  String? @db.Text
   termsAndConditions     String? @db.Text
+  // Customer's own purchase-order reference and the delivery vehicle's
+  // registration number — both optional, printed only when set.
+  poNumber               String?
+  vehicleNumber          String?
 
   subtotal      Decimal @db.Decimal(14, 2)
   discountTotal Decimal @db.Decimal(14, 2)

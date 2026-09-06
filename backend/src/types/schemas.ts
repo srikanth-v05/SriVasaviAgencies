@@ -246,6 +246,8 @@ export const invoiceSchema = z.object({
   paymentTerms: z.string().nullish(),
   notes: z.string().nullish(),
   termsAndConditions: z.string().nullish(),
+  poNumber: z.string().trim().nullish(),
+  vehicleNumber: z.string().trim().nullish(),
   items: z.array(lineItemSchema).min(1, "Add at least one item"),
 });
 

@@ -202,6 +202,8 @@ export interface Invoice extends DocumentTotals {
   paymentTerms: string | null;
   notes: string | null;
   termsAndConditions: string | null;
+  poNumber: string | null;
+  vehicleNumber: string | null;
   amountPaid: number;
   balanceDue: number;
   status: InvoiceStatus;

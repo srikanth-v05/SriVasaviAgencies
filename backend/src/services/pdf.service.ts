@@ -64,6 +64,8 @@ export class PdfService {
           ["Due Date", invoice.dueDate ? formatDate(invoice.dueDate) : "—"],
           ["Place of Supply", `${invoice.placeOfSupply} (${invoice.placeOfSupplyStateCode})`],
           ["Payment Terms", invoice.paymentTerms ?? "—"],
+          ...(invoice.poNumber ? ([["PO Number", invoice.poNumber]] as [string, string][]) : []),
+          ...(invoice.vehicleNumber ? ([["Vehicle No.", invoice.vehicleNumber]] as [string, string][]) : []),
         ],
         partyTitle: "Bill To",
         partyLines: this.partyLines(invoice),

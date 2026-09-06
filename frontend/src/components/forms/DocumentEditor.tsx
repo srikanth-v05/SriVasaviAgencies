@@ -26,6 +26,8 @@ export interface DocumentPayload {
   notes: string;
   termsAndConditions: string;
   paymentTerms?: string;
+  poNumber?: string;
+  vehicleNumber?: string;
   items: {
     productId: string | null;
     productName: string;
@@ -49,6 +51,8 @@ interface Props {
     notes?: string | null;
     termsAndConditions?: string | null;
     paymentTerms?: string | null;
+    poNumber?: string | null;
+    vehicleNumber?: string | null;
     items?: DocumentLine[];
   };
   submitLabel: string;
@@ -116,6 +120,8 @@ export function DocumentEditor({ kind, initial, submitLabel, isSubmitting, onSub
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [terms, setTerms] = useState(initial?.termsAndConditions ?? "");
   const [paymentTerms, setPaymentTerms] = useState(initial?.paymentTerms ?? "");
+  const [poNumber, setPoNumber] = useState(initial?.poNumber ?? "");
+  const [vehicleNumber, setVehicleNumber] = useState(initial?.vehicleNumber ?? "");
   const [lines, setLines] = useState<EditorLine[]>(
     initial?.items?.length ? initial.items.map(fromExisting) : [emptyLine()],
   );
@@ -167,6 +173,8 @@ export function DocumentEditor({ kind, initial, submitLabel, isSubmitting, onSub
       notes,
       termsAndConditions: terms,
       paymentTerms,
+      poNumber,
+      vehicleNumber,
       items: lines.map((line) => ({
         productId: line.productId,
         productName: line.productName.trim(),
@@ -230,14 +238,24 @@ export function DocumentEditor({ kind, initial, submitLabel, isSubmitting, onSub
           </Field>
 
           {kind === "invoice" && (
-            <Field label="Payment terms" htmlFor="payment-terms" className="sm:col-span-2">
-              <Input
-                id="payment-terms"
-                value={paymentTerms}
-                placeholder={company?.defaultPaymentTerms ?? "Net 15 days"}
-                onChange={(e) => setPaymentTerms(e.target.value)}
-              />
-            </Field>
+            <>
+              <Field label="Payment terms" htmlFor="payment-terms" className="sm:col-span-2">
+                <Input
+                  id="payment-terms"
+                  value={paymentTerms}
+                  placeholder={company?.defaultPaymentTerms ?? "Net 15 days"}
+                  onChange={(e) => setPaymentTerms(e.target.value)}
+                />
+              </Field>
+
+              <Field label="PO number" htmlFor="po-number" hint="Optional — the customer's own purchase-order reference.">
+                <Input id="po-number" value={poNumber} onChange={(e) => setPoNumber(e.target.value)} />
+              </Field>
+
+              <Field label="Vehicle number" htmlFor="vehicle-number" hint="Optional — leave blank if not known yet.">
+                <Input id="vehicle-number" className="type-data uppercase" value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value)} />
+              </Field>
+            </>
           )}
         </div>
       </Panel>

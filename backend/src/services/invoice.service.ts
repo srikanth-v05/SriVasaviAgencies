@@ -21,6 +21,8 @@ export interface InvoiceInput {
   paymentTerms?: string | null;
   notes?: string | null;
   termsAndConditions?: string | null;
+  poNumber?: string | null;
+  vehicleNumber?: string | null;
   items: LineDraft[];
 }
 
@@ -88,6 +90,8 @@ export class InvoiceService {
       paymentTerms: input.paymentTerms ?? company.defaultPaymentTerms,
       notes: input.notes ?? company.defaultInvoiceNotes ?? null,
       termsAndConditions: input.termsAndConditions ?? company.termsAndConditions ?? null,
+      poNumber: input.poNumber ?? null,
+      vehicleNumber: input.vehicleNumber ?? null,
       ...priced.totals,
       balanceDue: priced.totals.grandTotal,
       status: "DRAFT",
@@ -136,6 +140,8 @@ export class InvoiceService {
         paymentTerms: input.paymentTerms ?? before.paymentTerms,
         notes: input.notes ?? before.notes,
         termsAndConditions: input.termsAndConditions ?? before.termsAndConditions,
+        poNumber: input.poNumber ?? before.poNumber,
+        vehicleNumber: input.vehicleNumber ?? before.vehicleNumber,
         ...priced.totals,
         balanceDue: priced.totals.grandTotal.minus(before.amountPaid),
       },
