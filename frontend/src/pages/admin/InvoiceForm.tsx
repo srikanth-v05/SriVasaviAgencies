@@ -67,6 +67,7 @@ export function InvoiceForm() {
                 customerId: invoice.customerId,
                 date: invoice.invoiceDate,
                 secondaryDate: invoice.dueDate,
+                placeOfSupplyStateCode: invoice.placeOfSupplyStateCode,
                 notes: invoice.notes,
                 termsAndConditions: invoice.termsAndConditions,
                 paymentTerms: invoice.paymentTerms,

@@ -58,6 +58,7 @@ export function QuotationForm() {
                 customerId: quotation.customerId,
                 date: quotation.quotationDate,
                 secondaryDate: quotation.validUntil,
+                placeOfSupplyStateCode: quotation.placeOfSupplyStateCode,
                 notes: quotation.notes,
                 termsAndConditions: quotation.termsAndConditions,
                 items: quotation.items,

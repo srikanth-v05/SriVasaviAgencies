@@ -157,6 +157,7 @@ interface Props {
     customerId?: string;
     date?: string;
     secondaryDate?: string | null;
+    placeOfSupplyStateCode?: string | null;
     notes?: string | null;
     termsAndConditions?: string | null;
     paymentTerms?: string | null;
@@ -234,10 +235,13 @@ export function DocumentEditor({ kind, initial, submitLabel, isSubmitting, onSub
   const [lines, setLines] = useState<EditorLine[]>(
     initial?.items?.length ? initial.items.map(fromExisting) : [emptyLine()],
   );
-  const [placeOfSupplyOverride, setPlaceOfSupplyOverride] = useState<string>("");
+  const [placeOfSupplyOverride, setPlaceOfSupplyOverride] = useState<string>(initial?.placeOfSupplyStateCode ?? "");
+  const [bulkCount, setBulkCount] = useState("1");
 
   const customer = customers.find((c) => c.id === customerId);
-  const placeOfSupplyStateCode = placeOfSupplyOverride || customer?.stateCode || "";
+  // Not derived from the customer's state — left for the user to set explicitly.
+  // The server still falls back to the customer's state if this is left blank.
+  const placeOfSupplyStateCode = placeOfSupplyOverride;
   const isInterState = Boolean(company && placeOfSupplyStateCode && company.stateCode !== placeOfSupplyStateCode);
 
   const totals = useMemo(
@@ -328,16 +332,18 @@ export function DocumentEditor({ kind, initial, submitLabel, isSubmitting, onSub
             label="Place of supply"
             htmlFor="pos"
             hint={
-              customer
+              placeOfSupplyStateCode
                 ? isInterState
                   ? "Different state — IGST applies."
                   : "Same state as you — CGST and SGST apply."
-                : "Taken from the customer's state."
+                : customer
+                  ? `Left blank, defaults to ${customer.state} (${customer.stateCode}).`
+                  : "Left blank, defaults to the customer's own state."
             }
             className="sm:col-span-2"
           >
             <Select id="pos" value={placeOfSupplyStateCode} onChange={(e) => setPlaceOfSupplyOverride(e.target.value)}>
-              <option value="">{customer ? `${customer.state} (${customer.stateCode})` : "Select a customer first"}</option>
+              <option value="">Select place of supply…</option>
               {STATE_CODES.map((state) => (
                 <option key={state.code} value={state.code}>
                   {state.name} ({state.code})
@@ -375,9 +381,28 @@ export function DocumentEditor({ kind, initial, submitLabel, isSubmitting, onSub
           title="Items"
           description="The price you enter here is the price that bills. The master price is shown for reference only."
           actions={
-            <Button variant="secondary" size="sm" onClick={() => setLines((c) => [...c, emptyLine()])}>
-              Add line
-            </Button>
+            <div className="flex items-center gap-2">
+              <Input
+                aria-label="Number of lines to add"
+                type="number"
+                min={1}
+                step="1"
+                className="w-16 text-right"
+                value={bulkCount}
+                onChange={(e) => setBulkCount(e.target.value)}
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  const count = Math.max(1, Math.floor(Number(bulkCount)) || 1);
+                  setLines((c) => [...c, ...Array.from({ length: count }, emptyLine)]);
+                  setBulkCount("1");
+                }}
+              >
+                Add line{Number(bulkCount) > 1 ? "s" : ""}
+              </Button>
+            </div>
           }
         />
 

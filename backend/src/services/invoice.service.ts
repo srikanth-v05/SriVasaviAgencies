@@ -87,7 +87,7 @@ export class InvoiceService {
       dueDate: toDate(input.dueDate) ?? null,
       placeOfSupply: input.placeOfSupply ?? customer.state,
       placeOfSupplyStateCode,
-      paymentTerms: input.paymentTerms ?? company.defaultPaymentTerms,
+      paymentTerms: input.paymentTerms ?? null,
       notes: input.notes ?? company.defaultInvoiceNotes ?? null,
       termsAndConditions: input.termsAndConditions ?? company.termsAndConditions ?? null,
       poNumber: input.poNumber ?? null,
@@ -304,7 +304,7 @@ export class InvoiceService {
               invoiceNumber: number,
               status: "ISSUED",
               issuedAt: new Date(),
-              dueDate: invoice.dueDate ?? defaultDueDate(invoice.invoiceDate),
+              dueDate: invoice.dueDate,
               customerNameSnapshot: customer.companyName ?? customer.name,
               customerGstinSnapshot: customer.gstin,
               customerAddressSnapshot: billing
@@ -476,8 +476,4 @@ export class InvoiceService {
 
 function isOverdue(dueDate: Date | null): boolean {
   return dueDate !== null && dueDate.getTime() < Date.now();
-}
-
-function defaultDueDate(invoiceDate: Date): Date {
-  return new Date(invoiceDate.getTime() + 15 * 24 * 60 * 60 * 1000);
 }
