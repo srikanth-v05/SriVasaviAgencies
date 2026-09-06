@@ -108,7 +108,7 @@ export function Customers() {
                     {customer.companyName && <p className="text-[11px] text-muted">{customer.name}</p>}
                   </td>
                   <td className="px-4 py-2.5 text-xs text-ink-soft">{titleCase(customer.customerType)}</td>
-                  <td className="type-data px-4 py-2.5 text-xs text-ink-soft">{customer.phone}</td>
+                  <td className="type-data px-4 py-2.5 text-xs text-ink-soft">{customer.phone ?? "—"}</td>
                   <td className="type-data px-4 py-2.5 text-xs text-ink-soft">{customer.gstin ?? "—"}</td>
                   <td className="px-4 py-2.5 text-xs text-muted">
                     {customer.state} ({customer.stateCode})

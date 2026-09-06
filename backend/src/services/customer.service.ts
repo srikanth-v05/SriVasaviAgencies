@@ -13,7 +13,7 @@ export interface AddressInput {
   city: string;
   state: string;
   stateCode: string;
-  pincode: string;
+  pincode?: string | null;
   isDefault?: boolean;
 }
 
@@ -22,7 +22,7 @@ export interface CustomerInput {
   name: string;
   companyName?: string | null;
   contactPerson?: string | null;
-  phone: string;
+  phone?: string | null;
   alternatePhone?: string | null;
   email?: string | null;
   gstin?: string | null;
@@ -188,7 +188,7 @@ export class CustomerService {
       name: input.name,
       companyName: input.companyName ?? null,
       contactPerson: input.contactPerson ?? null,
-      phone: input.phone,
+      phone: input.phone ?? null,
       alternatePhone: input.alternatePhone ?? null,
       email: input.email ?? null,
       gstin: input.gstin ?? null,

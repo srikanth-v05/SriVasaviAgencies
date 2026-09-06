@@ -226,7 +226,7 @@ export function InvoiceDetail() {
             gstin={invoice.customerGstinSnapshot ?? invoice.customer.gstin}
             address={
               invoice.customerAddressSnapshot ??
-              (billing ? [billing.line1, billing.line2, `${billing.city} ${billing.pincode}`].filter(Boolean).join(", ") : null)
+              (billing ? [billing.line1, billing.line2, [billing.city, billing.pincode].filter(Boolean).join(" ")].filter(Boolean).join(", ") : null)
             }
             phone={invoice.customer.phone}
             state={`${invoice.customer.state} (${invoice.customer.stateCode})`}

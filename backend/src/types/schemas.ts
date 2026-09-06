@@ -166,7 +166,7 @@ export const addressSchema = z.object({
   city: z.string().trim().min(2),
   state: z.string().trim().min(2),
   stateCode: z.string().trim().regex(/^\d{1,2}$/),
-  pincode: z.string().trim().regex(/^\d{6}$/),
+  pincode: z.string().trim().regex(/^\d{6}$/, "PIN code is 6 digits").nullish().or(z.literal("")),
   isDefault: z.boolean().optional(),
 });
 
@@ -175,7 +175,7 @@ export const customerSchema = z.object({
   name: z.string().trim().min(2),
   companyName: z.string().trim().nullish(),
   contactPerson: z.string().trim().nullish(),
-  phone: z.string().trim().min(6),
+  phone: z.string().trim().min(6, "Enter at least 6 digits, or leave it blank").nullish().or(z.literal("")),
   alternatePhone: z.string().trim().nullish(),
   email: z.string().email().nullish().or(z.literal("")),
   gstin: z

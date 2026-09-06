@@ -151,7 +151,7 @@ export class ExcelService {
 
     const sheet = workbook.addWorksheet("Ledger");
     sheet.addRow([ledger.customer.companyName ?? ledger.customer.name]).font = { bold: true, size: 13 };
-    sheet.addRow([`GSTIN: ${ledger.customer.gstin ?? "—"}    Phone: ${ledger.customer.phone}`]);
+    sheet.addRow([`GSTIN: ${ledger.customer.gstin ?? "—"}    Phone: ${ledger.customer.phone ?? "—"}`]);
     sheet.addRow([]);
 
     const headerRowIndex = sheet.rowCount + 1;

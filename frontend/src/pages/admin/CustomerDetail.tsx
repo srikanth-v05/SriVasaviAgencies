@@ -61,8 +61,11 @@ export function CustomerDetail() {
             <div>
               <dt className="type-eyebrow text-[10px]">Contact</dt>
               <dd className="mt-1.5 text-sm text-ink">{customer.contactPerson ?? customer.name}</dd>
-              <dd className="type-data text-xs text-muted">{customer.phone}</dd>
+              {customer.phone && <dd className="type-data text-xs text-muted">{customer.phone}</dd>}
               {customer.alternatePhone && <dd className="type-data text-xs text-muted">{customer.alternatePhone}</dd>}
+              {!customer.phone && !customer.alternatePhone && !customer.email && (
+                <dd className="text-xs text-faint">No contact number on file</dd>
+              )}
               {customer.email && <dd className="text-xs text-muted">{customer.email}</dd>}
             </div>
 

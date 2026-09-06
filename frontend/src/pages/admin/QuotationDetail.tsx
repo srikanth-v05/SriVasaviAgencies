@@ -161,7 +161,7 @@ export function QuotationDetail() {
             title="Quotation for"
             name={quotation.customer.companyName ?? quotation.customer.name}
             gstin={quotation.customer.gstin}
-            address={billing ? [billing.line1, billing.line2, `${billing.city} ${billing.pincode}`].filter(Boolean).join(", ") : null}
+            address={billing ? [billing.line1, billing.line2, [billing.city, billing.pincode].filter(Boolean).join(" ")].filter(Boolean).join(", ") : null}
             phone={quotation.customer.phone}
             state={`${quotation.customer.state} (${quotation.customer.stateCode})`}
           />

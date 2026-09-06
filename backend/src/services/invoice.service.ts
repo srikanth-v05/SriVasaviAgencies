@@ -305,7 +305,7 @@ export class InvoiceService {
               customerNameSnapshot: customer.companyName ?? customer.name,
               customerGstinSnapshot: customer.gstin,
               customerAddressSnapshot: billing
-                ? [billing.line1, billing.line2, `${billing.city} ${billing.pincode}`, billing.state]
+                ? [billing.line1, billing.line2, [billing.city, billing.pincode].filter(Boolean).join(" "), billing.state]
                     .filter(Boolean)
                     .join(", ")
                 : null,

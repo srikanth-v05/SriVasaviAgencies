@@ -94,7 +94,7 @@ export interface Address {
   city: string;
   state: string;
   stateCode: string;
-  pincode: string;
+  pincode: string | null;
   isDefault?: boolean;
 }
 
@@ -104,7 +104,7 @@ export interface Customer {
   name: string;
   companyName: string | null;
   contactPerson: string | null;
-  phone: string;
+  phone: string | null;
   alternatePhone: string | null;
   email: string | null;
   gstin: string | null;

@@ -94,7 +94,7 @@ export class PdfService {
           quotation.customer.companyName ?? quotation.customer.name,
           ...(quotation.customer.contactPerson ? [`Attn: ${quotation.customer.contactPerson}`] : []),
           ...(quotation.customer.gstin ? [`GSTIN: ${quotation.customer.gstin}`] : []),
-          `Phone: ${quotation.customer.phone}`,
+          ...(quotation.customer.phone ? [`Phone: ${quotation.customer.phone}`] : []),
           `${quotation.customer.state} (${quotation.customer.stateCode})`,
         ],
       });
@@ -490,7 +490,7 @@ export class PdfService {
           customer.addresses.find((a) => a.addressType === "BILLING") ??
           customer.addresses[0];
         return billing
-          ? [billing.line1, billing.line2, `${billing.city} ${billing.pincode}`, billing.state].filter(Boolean).join(", ")
+          ? [billing.line1, billing.line2, [billing.city, billing.pincode].filter(Boolean).join(" "), billing.state].filter(Boolean).join(", ")
           : null;
       })();
 
@@ -499,7 +499,7 @@ export class PdfService {
       ...(customer.contactPerson ? [`Attn: ${customer.contactPerson}`] : []),
       ...(address ? [address] : []),
       ...(invoice.customerGstinSnapshot ?? customer.gstin ? [`GSTIN: ${invoice.customerGstinSnapshot ?? customer.gstin}`] : []),
-      `Phone: ${customer.phone}`,
+      ...(customer.phone ? [`Phone: ${customer.phone}`] : []),
     ];
   }
 }

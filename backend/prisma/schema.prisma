@@ -281,7 +281,11 @@ model Customer {
   name           String
   companyName    String?
   contactPerson  String?
-  phone          String
+  /// Optional: real-world customer records — especially a bulk import from an
+  /// existing spreadsheet — often arrive with a GSTIN and address but no phone
+  /// captured yet. Company (own) and Enquiry (public contact form) still
+  /// require one; only the customer record itself does not.
+  phone          String?
   alternatePhone String?
   email          String?
   gstin          String?
@@ -311,7 +315,9 @@ model CustomerAddress {
   city        String
   state       String
   stateCode   String
-  pincode     String
+  /// Optional for the same reason Customer.phone is: a bulk-imported address
+  /// often has no PIN code captured yet.
+  pincode     String?
   isDefault   Boolean     @default(false)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt

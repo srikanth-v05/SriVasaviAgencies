@@ -97,7 +97,10 @@ function CustomerFormBody({
   const state = STATE_CODES.find((s) => s.code === form.stateCode);
   const set = (patch: Partial<typeof form>) => setForm((current) => ({ ...current, ...patch }));
 
-  const canSubmit = form.name.trim().length >= 2 && form.phone.trim().length >= 6;
+  // Phone is optional, but if something is typed it must be a real number, not
+  // a stray character or two.
+  const phoneValid = form.phone.trim().length === 0 || form.phone.trim().length >= 6;
+  const canSubmit = form.name.trim().length >= 2 && phoneValid;
 
   const submit = () => {
     if (!canSubmit) return;
@@ -111,7 +114,7 @@ function CustomerFormBody({
         city: billing.city.trim(),
         state: state?.name ?? "",
         stateCode: form.stateCode,
-        pincode: billing.pincode.trim(),
+        pincode: billing.pincode.trim() || null,
         isDefault: true,
       });
       if (!shipToSame && shipping.line1.trim()) {
@@ -122,7 +125,7 @@ function CustomerFormBody({
           city: shipping.city.trim(),
           state: state?.name ?? "",
           stateCode: form.stateCode,
-          pincode: shipping.pincode.trim(),
+          pincode: shipping.pincode.trim() || null,
           isDefault: true,
         });
       }
@@ -133,7 +136,7 @@ function CustomerFormBody({
       name: form.name.trim(),
       companyName: form.companyName.trim() || null,
       contactPerson: form.contactPerson.trim() || null,
-      phone: form.phone.trim(),
+      phone: form.phone.trim() || null,
       alternatePhone: form.alternatePhone.trim() || null,
       email: form.email.trim() || null,
       gstin: form.gstin.trim().toUpperCase() || null,
@@ -180,8 +183,19 @@ function CustomerFormBody({
             <Input id="contact" value={form.contactPerson} onChange={(e) => set({ contactPerson: e.target.value })} />
           </Field>
 
-          <Field label="Phone" htmlFor="phone" required>
-            <Input id="phone" inputMode="tel" value={form.phone} onChange={(e) => set({ phone: e.target.value })} />
+          <Field
+            label="Phone"
+            htmlFor="phone"
+            hint={phoneValid ? "Optional — leave blank if you don't have one yet." : undefined}
+            error={!phoneValid ? "Enter at least 6 digits, or clear it" : undefined}
+          >
+            <Input
+              id="phone"
+              inputMode="tel"
+              aria-invalid={!phoneValid}
+              value={form.phone}
+              onChange={(e) => set({ phone: e.target.value })}
+            />
           </Field>
 
           <Field label="Alternate phone" htmlFor="alt-phone">
