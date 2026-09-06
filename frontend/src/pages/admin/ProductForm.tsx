@@ -72,12 +72,11 @@ function ProductFormBody({
   const set = (patch: Partial<typeof form>) => setForm((current) => ({ ...current, ...patch }));
 
   const unitId = form.unitId || units?.[0]?.id || "";
-  const canSubmit = form.productCode.trim() && form.name.trim().length >= 2 && unitId && form.defaultPrice !== "";
+  const canSubmit = form.name.trim().length >= 2 && unitId && form.defaultPrice !== "";
 
   const submit = () => {
     if (!canSubmit) return;
     onSubmit({
-      productCode: form.productCode.trim(),
       name: form.name.trim(),
       categoryId: form.categoryId || null,
       description: form.description.trim() || null,
@@ -104,11 +103,13 @@ function ProductFormBody({
       <Panel>
         <PanelHeader title="Product" />
         <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Product code" htmlFor="code" required hint="Your internal SKU.">
-            <Input id="code" className="type-data" value={form.productCode} onChange={(e) => set({ productCode: e.target.value })} />
-          </Field>
+          {isEdit && (
+            <Field label="Product code" htmlFor="code" hint="Assigned automatically when the product was created.">
+              <Input id="code" className="type-data" value={form.productCode} disabled />
+            </Field>
+          )}
 
-          <Field label="Name" htmlFor="name" required className="sm:col-span-2">
+          <Field label="Name" htmlFor="name" required className={isEdit ? "sm:col-span-2" : "sm:col-span-2 lg:col-span-3"}>
             <Input id="name" value={form.name} onChange={(e) => set({ name: e.target.value })} />
           </Field>
 

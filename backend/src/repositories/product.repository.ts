@@ -68,6 +68,14 @@ export class ProductRepository {
     return this.db.product.findUnique({ where: { slug }, select: { id: true } }).then((r) => r !== null);
   }
 
+  codeExists(productCode: string): Promise<boolean> {
+    return this.db.product.findUnique({ where: { productCode }, select: { id: true } }).then((r) => r !== null);
+  }
+
+  count(): Promise<number> {
+    return this.db.product.count();
+  }
+
   create(data: Prisma.ProductCreateInput): Promise<ProductWithRelations> {
     return this.db.product.create({ data, include: withRelations });
   }

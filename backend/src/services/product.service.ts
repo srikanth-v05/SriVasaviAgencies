@@ -6,7 +6,8 @@ import { NotFoundError, ValidationError, ConflictError } from "../utils/errors";
 import { uniqueSlug } from "../utils/slug";
 
 export interface ProductInput {
-  productCode: string;
+  /** Assigned automatically (PRD-0001, PRD-0002, ...) when not given. */
+  productCode?: string | null;
   name: string;
   categoryId?: string | null;
   description?: string | null;
@@ -47,9 +48,11 @@ export class ProductService {
   async create(input: ProductInput) {
     await this.assertUnitExists(input.unitId);
 
+    const productCode = input.productCode?.trim() || (await this.nextProductCode());
     const slug = await uniqueSlug(input.name, (s) => this.productRepository.slugExists(s));
     const product = await this.productRepository.create({
       ...this.toPersistable(input),
+      productCode,
       slug,
       unit: { connect: { id: input.unitId } },
       ...(input.categoryId ? { category: { connect: { id: input.categoryId } } } : {}),
@@ -69,7 +72,7 @@ export class ProductService {
     if (input.unitId) await this.assertUnitExists(input.unitId);
 
     const data: Prisma.ProductUpdateInput = {
-      ...(input.productCode !== undefined ? { productCode: input.productCode } : {}),
+      ...(input.productCode ? { productCode: input.productCode } : {}),
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.description !== undefined ? { description: input.description } : {}),
       ...(input.dilutionRatio !== undefined ? { dilutionRatio: input.dilutionRatio } : {}),
@@ -139,9 +142,19 @@ export class ProductService {
     if (!unit) throw new ValidationError("The selected unit does not exist");
   }
 
+  /** Generated from a running count, with a collision check to cover gaps left by deletions. */
+  private async nextProductCode(): Promise<string> {
+    let sequence = (await this.productRepository.count()) + 1;
+    let candidate = `PRD-${String(sequence).padStart(4, "0")}`;
+    while (await this.productRepository.codeExists(candidate)) {
+      sequence += 1;
+      candidate = `PRD-${String(sequence).padStart(4, "0")}`;
+    }
+    return candidate;
+  }
+
   private toPersistable(input: ProductInput) {
     return {
-      productCode: input.productCode,
       name: input.name,
       description: input.description ?? null,
       dilutionRatio: input.dilutionRatio ?? null,

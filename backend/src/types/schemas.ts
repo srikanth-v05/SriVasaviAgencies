@@ -122,7 +122,8 @@ export const gstRateSchema = z.object({
 });
 
 export const productSchema = z.object({
-  productCode: z.string().trim().min(1),
+  /** Left blank to have the system assign one automatically. */
+  productCode: z.string().trim().min(1).nullish(),
   name: z.string().trim().min(2),
   categoryId: z.string().uuid().nullish(),
   description: z.string().nullish(),
