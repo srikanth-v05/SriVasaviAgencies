@@ -176,19 +176,3 @@ export async function download(path: string, query?: RequestOptions["query"]): P
   URL.revokeObjectURL(url);
 }
 
-/** Open a PDF in a new tab, fetching it with credentials first. */
-export async function openPdf(path: string): Promise<void> {
-  const response = await fetch(buildUrl(path), {
-    credentials: "include",
-    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-  });
-
-  if (!response.ok) {
-    if (response.status === 401 && (await refreshSession())) return openPdf(path);
-    throw new ApiError("Could not open that document", response.status);
-  }
-
-  const url = URL.createObjectURL(await response.blob());
-  window.open(url, "_blank", "noopener");
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
-}

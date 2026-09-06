@@ -42,7 +42,7 @@ export class InvoiceController {
   };
 
   finalize = async (req: Request, res: Response) => {
-    const invoice = await this.invoiceService.finalize(req.params.id);
+    const invoice = await this.invoiceService.finalize(req.params.id, { startSequence: req.body.startSequence });
     return ApiResponse.success(res, serialize(invoice), `Issued as ${invoice.invoiceNumber}`);
   };
 

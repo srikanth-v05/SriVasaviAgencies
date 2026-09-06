@@ -45,7 +45,10 @@ function normaliseError(err: Error): Error {
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     switch (err.code) {
       case "P2002": {
-        const target = (err.meta?.target as string[] | undefined)?.join(", ") ?? "value";
+        // Postgres/SQLite report `meta.target` as string[]; TiDB/MySQL report a
+        // single string (the constraint name) instead — handle both shapes.
+        const rawTarget = err.meta?.target;
+        const target = Array.isArray(rawTarget) ? rawTarget.join(", ") : typeof rawTarget === "string" ? rawTarget : "value";
         return new ConflictError(`A record with this ${target} already exists`);
       }
       case "P2025":

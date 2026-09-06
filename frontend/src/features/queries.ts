@@ -279,7 +279,8 @@ export function useSaveInvoice(id?: string) {
 export function useFinalizeInvoice() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.post<Invoice>(`/invoices/${id}/finalize`).then(unwrap),
+    mutationFn: ({ id, startSequence }: { id: string; startSequence?: number }) =>
+      api.post<Invoice>(`/invoices/${id}/finalize`, startSequence ? { startSequence } : undefined).then(unwrap),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["invoices"] });
       void client.invalidateQueries({ queryKey: keys.dashboard });

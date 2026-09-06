@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { openPdf } from "@/api/client";
+import { download } from "@/api/client";
 import { useConvertQuotation, useDeleteQuotation, useQuotation, useQuotationAction } from "@/features/queries";
 import { DocumentLines, DocumentTotals, PartyBlock } from "@/components/common/DocumentView";
 import { Button, ErrorState, Panel, PanelHeader, Spinner, StatusPill } from "@/components/common/ui";
@@ -52,8 +52,8 @@ export function QuotationDetail() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" size="sm" onClick={() => void openPdf(`/quotations/${quotation.id}/pdf`)}>
-            View PDF
+          <Button variant="secondary" size="sm" onClick={() => void download(`/quotations/${quotation.id}/pdf`, { download: "true" })}>
+            Download PDF
           </Button>
 
           {writable && editable && (

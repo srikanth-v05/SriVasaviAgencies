@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { openPdf } from "@/api/client";
+import { download } from "@/api/client";
 import {
   useCancelInvoice,
   useDeleteInvoice,
@@ -84,8 +84,8 @@ export function InvoiceDetail() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" size="sm" onClick={() => void openPdf(`/invoices/${invoice.id}/pdf`)}>
-            View PDF
+          <Button variant="secondary" size="sm" onClick={() => void download(`/invoices/${invoice.id}/pdf`, { download: "true" })}>
+            Download PDF
           </Button>
 
           {writable && isDraft && (
@@ -97,9 +97,20 @@ export function InvoiceDetail() {
                 size="sm"
                 onClick={() =>
                   void (async () => {
-                    if (!window.confirm("Issue this invoice? It will take the next invoice number and can no longer be edited.")) return;
+                    const raw = window.prompt(
+                      "Issue this invoice. It can no longer be edited afterwards.\n\nLeave this blank to continue the normal numbering, or type a number to start (or resume) the series from there, e.g. 451:",
+                    );
+                    if (raw === null) return;
+
+                    const trimmed = raw.trim();
+                    const startSequence = trimmed ? Number(trimmed) : undefined;
+                    if (trimmed && (!Number.isInteger(startSequence) || (startSequence as number) <= 0)) {
+                      toast.error("Enter a whole number greater than 0, or leave it blank");
+                      return;
+                    }
+
                     try {
-                      const issued = await finalize.mutateAsync(invoice.id);
+                      const issued = await finalize.mutateAsync({ id: invoice.id, startSequence });
                       toast.success(`Issued as ${issued.invoiceNumber}`);
                     } catch (err) {
                       toast.error(errorMessage(err));

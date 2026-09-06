@@ -205,7 +205,12 @@ export function buildRouter(): Router {
     asyncHandler(invoices.update),
   );
   router.delete("/invoices/:id", requirePermission("invoices:write"), validate({ params: s.idParam }), asyncHandler(invoices.remove));
-  router.post("/invoices/:id/finalize", requirePermission("invoices:write"), validate({ params: s.idParam }), asyncHandler(invoices.finalize));
+  router.post(
+    "/invoices/:id/finalize",
+    requirePermission("invoices:write"),
+    validate({ params: s.idParam, body: s.finalizeInvoiceSchema }),
+    asyncHandler(invoices.finalize),
+  );
   router.post(
     "/invoices/:id/cancel",
     requirePermission("invoices:write"),

@@ -168,6 +168,11 @@ export const productQuery = paginationQuery.extend({
 
 export const statusSchema = z.object({ isActive: z.boolean() });
 
+/** Optional invoice-number override when issuing — leave out to auto-continue the series. */
+export const finalizeInvoiceSchema = z.object({
+  startSequence: z.coerce.number().int().positive().optional(),
+});
+
 // --------------------------------------------------------------------------- customers
 
 export const customerTypeSchema = z.enum([

@@ -90,6 +90,38 @@ export class NumberingService {
     return row?.padding ?? 4;
   }
 
+  /**
+   * Force this document to take a specific sequence number, and leave the
+   * counter set so the *next* allocation continues from there — e.g. to match
+   * an external series, or to pick up after invoices raised outside the app.
+   * Uniqueness is enforced by the invoice/quotation number's own DB constraint,
+   * not here: a number already in use fails the write that uses it, exactly
+   * like any other conflict.
+   */
+  async allocateFrom(
+    tx: PrismaTransaction,
+    kind: DocumentKind,
+    prefix: string,
+    documentDate: Date,
+    sequence: number,
+  ): Promise<{ number: string; sequence: number; financialYear: string }> {
+    const financialYear = financialYearOf(documentDate);
+    const kindLiteral = Prisma.raw(`'${kind}'`);
+
+    await tx.$executeRaw`
+      INSERT INTO document_sequences (id, kind, financialYear, prefix, nextNumber, padding, updatedAt)
+      VALUES (UUID(), ${kindLiteral}, ${financialYear}, ${prefix}, ${sequence + 1}, 4, NOW(3))
+      ON DUPLICATE KEY UPDATE nextNumber = ${sequence + 1}, prefix = ${prefix}, updatedAt = NOW(3)
+    `;
+
+    const padding = await this.paddingFor(tx, kind, financialYear);
+    return {
+      number: `${prefix}/${financialYear}/${String(sequence).padStart(padding, "0")}`,
+      sequence,
+      financialYear,
+    };
+  }
+
   /** Preview the next number without consuming it — for UI display only. */
   async peek(tx: PrismaTransaction, kind: DocumentKind, prefix: string, documentDate: Date): Promise<string> {
     const financialYear = financialYearOf(documentDate);

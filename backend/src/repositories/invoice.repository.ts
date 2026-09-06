@@ -85,6 +85,10 @@ export class InvoiceRepository {
     return { rows, total };
   }
 
+  findByInvoiceNumber(invoiceNumber: string, tx?: PrismaTransaction): Promise<{ id: string } | null> {
+    return (tx ?? this.db).invoice.findUnique({ where: { invoiceNumber }, select: { id: true } });
+  }
+
   findById(id: string, tx?: PrismaTransaction): Promise<InvoiceFull | null> {
     return (tx ?? this.db).invoice.findUnique({ where: { id }, include: fullInclude });
   }

@@ -7,7 +7,7 @@ import { DocumentPricingService, type LineDraft } from "./document-pricing.servi
 import { NumberingService } from "./numbering.service";
 import { CompanyService } from "./company.service";
 import { AuditService, AuditAction } from "./audit.service";
-import { NotFoundError, ValidationError, DocumentStateError } from "../utils/errors";
+import { NotFoundError, ValidationError, ConflictError, DocumentStateError } from "../utils/errors";
 import { prisma, type PrismaTransaction } from "../db/prisma";
 import { withRetry } from "../db/retry";
 import { toDate } from "./quotation.service";
@@ -270,7 +270,7 @@ export class InvoiceService {
    * number, freeze the buyer details, and write the audit event. Any failure
    * rolls the whole thing back, including the number.
    */
-  async finalize(id: string): Promise<InvoiceFull> {
+  async finalize(id: string, options?: { startSequence?: number }): Promise<InvoiceFull> {
     // Wrapped in withRetry because this transaction consumes an invoice number:
     // two staff issuing at the same instant contend on the counter row, and TiDB
     // may abort the loser. That abort is safe to replay.
@@ -288,12 +288,9 @@ export class InvoiceService {
           const company = await this.companyService.getIn(tx);
           this.assertReadyToIssue(invoice);
 
-          const { number } = await this.numberingService.allocate(
-            tx,
-            "INVOICE",
-            company.invoicePrefix,
-            invoice.invoiceDate,
-          );
+          const { number } = options?.startSequence
+            ? await this.allocateFromChecked(tx, company.invoicePrefix, invoice.invoiceDate, options.startSequence)
+            : await this.numberingService.allocate(tx, "INVOICE", company.invoicePrefix, invoice.invoiceDate);
 
           const customer = invoice.customer;
           const billing =
@@ -415,6 +412,24 @@ export class InvoiceService {
         "An issued invoice is locked. Cancel it and raise a fresh invoice if the figures must change.",
       );
     }
+  }
+
+  /**
+   * A manual starting sequence can collide with a number already issued —
+   * checked explicitly here for a clear message, rather than surfacing the
+   * DB's own unique-constraint error. Runs inside the caller's transaction,
+   * so a collision rolls back the sequence-counter update too.
+   */
+  private async allocateFromChecked(
+    tx: PrismaTransaction,
+    prefix: string,
+    documentDate: Date,
+    startSequence: number,
+  ) {
+    const allocated = await this.numberingService.allocateFrom(tx, "INVOICE", prefix, documentDate, startSequence);
+    const existing = await this.invoiceRepository.findByInvoiceNumber(allocated.number, tx);
+    if (existing) throw new ConflictError(`Invoice number ${allocated.number} is already in use`);
+    return allocated;
   }
 
   /**
