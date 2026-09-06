@@ -13,13 +13,19 @@ import { ZONES, zoneAccent } from "@/lib/zones";
 import { money } from "@/lib/format";
 import { telLink, whatsappLink } from "@/lib/contact";
 
+/** Only these three appear in the cost-in-use calculator — a deliberate, curated set, not "whatever loaded first". */
+const CALCULATOR_PRODUCTS = ["PHENYL", "SOAP OIL", "ACID"];
+
 export function Home() {
-  const { data: products } = usePublicProducts({ limit: 6 });
+  const { data: allProducts } = usePublicProducts({ limit: 100 });
   const { data: categories } = usePublicCategories();
   const { data: company } = usePublicCompany();
 
-  const featured = products?.data ?? [];
-  const concentrates = featured.filter((p) => p.dilutionRatio && p.dilutionRatio.includes(":"));
+  const all = allProducts?.data ?? [];
+  const featured = all.slice(0, 6);
+  const calculatorProducts = CALCULATOR_PRODUCTS.map((name) => all.find((p) => p.name.toUpperCase() === name)).filter(
+    (p): p is NonNullable<typeof p> => Boolean(p),
+  );
   const phone = company?.phone ?? "+91 99436 77409";
 
   return (
@@ -97,7 +103,7 @@ export function Home() {
 
           {/* The signature: the sum a procurement officer actually does. */}
           <div className="rise" style={{ animationDelay: "120ms" }}>
-            <CostInUsePanel products={concentrates.length > 0 ? concentrates : featured} />
+            <CostInUsePanel products={calculatorProducts} />
           </div>
         </div>
       </section>

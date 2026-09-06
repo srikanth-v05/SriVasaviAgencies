@@ -340,7 +340,7 @@ export const enquirySchema = z.object({
 
 export const publicProductQuery = z.object({
   page: z.coerce.number().int().min(1).optional(),
-  limit: z.coerce.number().int().min(1).max(60).optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
   search: z.string().trim().min(1).optional(),
   categoryId: z.string().uuid().optional(),
 });
