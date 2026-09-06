@@ -1,10 +1,119 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useCompany, useCustomers, useProducts } from "@/features/queries";
 import { previewDocument, type DraftLine } from "@/lib/gst";
 import { money, amount, today, dateInput } from "@/lib/format";
 import { Button, Field, Input, Panel, PanelHeader, Select, Textarea } from "@/components/common/ui";
 import type { Customer, DiscountType, DocumentLine, Product } from "@/types";
+
+/**
+ * Type-to-filter product search, replacing a plain <select> that would
+ * otherwise list every product in the catalogue — unusable once there are
+ * more than a handful.
+ */
+function ProductPicker({
+  products,
+  value,
+  onPick,
+  ariaLabel,
+}: {
+  products: Product[];
+  value: string | null;
+  onPick: (productId: string) => void;
+  ariaLabel: string;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selected = products.find((p) => p.id === value) ?? null;
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  const needle = query.trim().toLowerCase();
+  const matches = (
+    needle
+      ? products.filter((p) => p.name.toLowerCase().includes(needle) || p.productCode.toLowerCase().includes(needle))
+      : products
+  ).slice(0, 50);
+
+  const pick = (productId: string) => {
+    onPick(productId);
+    setQuery("");
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <Input
+        aria-label={ariaLabel}
+        value={open ? query : (selected?.name ?? "")}
+        placeholder="Type to search products…"
+        onFocus={() => {
+          setQuery("");
+          setOpen(true);
+          setHighlight(0);
+        }}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+          setHighlight(0);
+        }}
+        onKeyDown={(e) => {
+          if (!open) return;
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setHighlight((h) => Math.min(h + 1, matches.length - 1));
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setHighlight((h) => Math.max(h - 1, 0));
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            const match = matches[highlight];
+            if (match) pick(match.id);
+          } else if (e.key === "Escape") {
+            setOpen(false);
+          }
+        }}
+      />
+      {open && (
+        <div className="panel absolute z-10 mt-1 max-h-64 w-full overflow-y-auto py-1">
+          <button
+            type="button"
+            className="block w-full px-3 py-1.5 text-left text-xs text-muted hover:bg-ground"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => pick("")}
+          >
+            Free-text line…
+          </button>
+          {matches.length === 0 ? (
+            <p className="px-3 py-1.5 text-xs text-muted">No matching products</p>
+          ) : (
+            matches.map((p, i) => (
+              <button
+                key={p.id}
+                type="button"
+                className={`block w-full px-3 py-1.5 text-left text-sm ${i === highlight ? "bg-ground" : "hover:bg-ground"}`}
+                onMouseDown={(e) => e.preventDefault()}
+                onMouseEnter={() => setHighlight(i)}
+                onClick={() => pick(p.id)}
+              >
+                {p.name} <span className="type-data text-xs text-muted">({p.productCode})</span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export interface EditorLine extends DraftLine {
   key: string;
@@ -301,18 +410,12 @@ export function DocumentEditor({ kind, initial, submitLabel, isSubmitting, onSub
                     <td className="px-2 py-2 text-xs text-muted">{index + 1}</td>
 
                     <td className="px-2 py-2">
-                      <Select
-                        aria-label={`Product for line ${index + 1}`}
-                        value={line.productId ?? ""}
-                        onChange={(e) => pickProduct(line.key, e.target.value)}
-                      >
-                        <option value="">Free-text line…</option>
-                        {products.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </Select>
+                      <ProductPicker
+                        ariaLabel={`Product for line ${index + 1}`}
+                        products={products}
+                        value={line.productId}
+                        onPick={(productId) => pickProduct(line.key, productId)}
+                      />
                       <Input
                         aria-label={`Description for line ${index + 1}`}
                         className="mt-1.5"
