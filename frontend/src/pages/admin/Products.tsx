@@ -1,5 +1,7 @@
+import { useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useCategories, useDeleteProduct, useProducts, useSetProductStatus } from "@/features/queries";
+import { useCategories, useDeleteProduct, useImportCatalog, useProducts, useSetProductStatus } from "@/features/queries";
+import { download } from "@/api/client";
 import {
   Button,
   EmptyState,
@@ -21,6 +23,7 @@ export function Products() {
   const [params, setParams] = useSearchParams();
   const toast = useToast();
   const { can } = useAuth();
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const page = Number(params.get("page") ?? 1);
   const categoryId = params.get("categoryId") ?? undefined;
@@ -30,6 +33,25 @@ export function Products() {
   const { data, isLoading, error, refetch } = useProducts({ page, limit: 25, categoryId, search });
   const setStatus = useSetProductStatus();
   const remove = useDeleteProduct();
+  const importCatalog = useImportCatalog();
+
+  const pickFile = () => fileInput.current?.click();
+
+  const onFileChosen = async (file: File) => {
+    try {
+      const parsed = JSON.parse(await file.text());
+      const products = Array.isArray(parsed) ? parsed : parsed.products;
+      if (!Array.isArray(products)) throw new Error("This file has no \"products\" list in it.");
+
+      const result = await importCatalog.mutateAsync(products);
+      toast.success(`Import done — ${result.created} created, ${result.updated} updated, ${result.failed} failed`);
+      if (result.errors.length > 0) {
+        toast.error(result.errors.slice(0, 3).map((e) => `Row ${e.row} (${e.name}): ${e.message}`).join(" · "));
+      }
+    } catch (err) {
+      toast.error(errorMessage(err, "Could not import that file"));
+    }
+  };
 
   const setParam = (key: string, value?: string) => {
     const next = new URLSearchParams(params);
@@ -50,7 +72,30 @@ export function Products() {
             Prices here are defaults. Any document can be billed at a different price.
           </p>
         </div>
-        {writable && <LinkButton to="/admin/products/new">New product</LinkButton>}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={() => void download("/products/export")}>
+            Export catalog
+          </Button>
+          {writable && (
+            <>
+              <input
+                ref={fileInput}
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void onFileChosen(file);
+                }}
+              />
+              <Button variant="secondary" onClick={pickFile} disabled={importCatalog.isPending}>
+                {importCatalog.isPending ? "Importing…" : "Import catalog"}
+              </Button>
+              <LinkButton to="/admin/products/new">New product</LinkButton>
+            </>
+          )}
+        </div>
       </header>
 
       <Panel>

@@ -144,6 +144,22 @@ export function useDeleteProduct() {
   });
 }
 
+export interface CatalogImportResult {
+  created: number;
+  updated: number;
+  failed: number;
+  errors: { row: number; name: string; message: string }[];
+}
+
+export function useImportCatalog() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (products: Record<string, unknown>[]) =>
+      api.post<CatalogImportResult>("/products/import", { products }).then(unwrap),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["products"] }),
+  });
+}
+
 /* --------------------------------------------------------------- customers */
 
 export const useCustomers = (query: Query) =>

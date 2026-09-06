@@ -27,14 +27,16 @@ function buildService(existingCodes: string[]) {
 
   const masterDataRepository = { findUnitById: vi.fn(async () => ({ id: "unit-1" })) };
   const auditService = { record: vi.fn(async () => undefined) };
+  const catalogCacheService = { rebuild: vi.fn(async () => undefined) };
 
   const service = new ProductService(
     productRepository as never,
     masterDataRepository as never,
     auditService as never,
+    catalogCacheService as never,
   );
 
-  return { service, productRepository };
+  return { service, productRepository, catalogCacheService };
 }
 
 describe("ProductService — product code assignment", () => {
@@ -63,5 +65,11 @@ describe("ProductService — product code assignment", () => {
     const product = await service.create({ ...BASE_INPUT, productCode: "CUSTOM-01" });
     expect(product.productCode).toBe("CUSTOM-01");
     expect(productRepository.count).not.toHaveBeenCalled();
+  });
+
+  it("rebuilds the public catalogue cache after creating a product", async () => {
+    const { service, catalogCacheService } = buildService([]);
+    await service.create({ ...BASE_INPUT });
+    expect(catalogCacheService.rebuild).toHaveBeenCalledTimes(1);
   });
 });

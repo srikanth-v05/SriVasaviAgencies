@@ -58,6 +58,10 @@ export class ProductRepository {
     return this.db.product.findUnique({ where: { slug }, include: withRelations });
   }
 
+  findByCode(productCode: string): Promise<ProductWithRelations | null> {
+    return this.db.product.findUnique({ where: { productCode }, include: withRelations });
+  }
+
   /** Batch lookup used when pricing document lines, to avoid an N+1 per line. */
   findManyByIds(ids: string[], tx?: PrismaTransaction): Promise<ProductWithRelations[]> {
     if (ids.length === 0) return Promise.resolve([]);

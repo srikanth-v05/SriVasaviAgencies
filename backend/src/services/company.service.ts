@@ -19,12 +19,18 @@ export class CompanyService {
   ) {}
 
   async get(): Promise<CompanySettings> {
-    if (this.cache) return this.cache;
-    const settings = await this.companyRepository.get();
+    const settings = await this.cached();
     if (!settings) {
       throw new NotFoundError("Company settings have not been configured yet. Run the seed or save them from Settings.");
     }
-    this.cache = settings;
+    return settings;
+  }
+
+  /** Reads through the in-process cache — populates it on the first call only. */
+  private async cached(): Promise<CompanySettings | null> {
+    if (this.cache) return this.cache;
+    const settings = await this.companyRepository.get();
+    if (settings) this.cache = settings;
     return settings;
   }
 
@@ -36,7 +42,7 @@ export class CompanyService {
   }
 
   async getOrNull(): Promise<CompanySettings | null> {
-    return this.companyRepository.get();
+    return this.cached();
   }
 
   async save(data: Prisma.CompanySettingsCreateInput): Promise<CompanySettings> {
@@ -91,7 +97,7 @@ export class CompanyService {
 
   /** Public-website subset — never expose banking details or document counters. */
   async publicProfile() {
-    const settings = await this.companyRepository.get();
+    const settings = await this.cached();
     if (!settings) return null;
     return {
       name: settings.name,

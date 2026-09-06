@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
-import { ProductRepository, type ProductQuery } from "../repositories/product.repository";
+import { ProductRepository, type ProductQuery, type ProductWithRelations } from "../repositories/product.repository";
 import { MasterDataRepository } from "../repositories/master-data.repository";
+import { CatalogCacheService } from "./catalog-cache.service";
 import { AuditService, AuditAction } from "./audit.service";
 import { NotFoundError, ValidationError, ConflictError } from "../utils/errors";
 import { uniqueSlug } from "../utils/slug";
@@ -22,11 +23,35 @@ export interface ProductInput {
   showOnWebsite?: boolean;
 }
 
+/** One row of the hand-editable catalog export/import — plain names, not internal ids. */
+export interface ProductCatalogRow {
+  productCode?: string | null;
+  name: string;
+  category?: string | null;
+  unit: string;
+  price: number;
+  gstRate: number;
+  hsnCode?: string | null;
+  packSize?: string | null;
+  dilutionRatio?: string | null;
+  description?: string | null;
+  isActive?: boolean;
+  showOnWebsite?: boolean;
+}
+
+export interface CatalogImportResult {
+  created: number;
+  updated: number;
+  failed: number;
+  errors: { row: number; name: string; message: string }[];
+}
+
 export class ProductService {
   constructor(
     private productRepository: ProductRepository,
     private masterDataRepository: MasterDataRepository,
     private auditService: AuditService,
+    private catalogCacheService: CatalogCacheService,
   ) {}
 
   list(query: ProductQuery) {
@@ -45,7 +70,143 @@ export class ProductService {
     return product;
   }
 
-  async create(input: ProductInput) {
+  async create(input: ProductInput): Promise<ProductWithRelations> {
+    const product = await this.createCore(input);
+    await this.catalogCacheService.rebuild();
+    return product;
+  }
+
+  async update(id: string, input: Partial<ProductInput>): Promise<ProductWithRelations> {
+    const product = await this.updateCore(id, input);
+    await this.catalogCacheService.rebuild();
+    return product;
+  }
+
+  async setStatus(id: string, isActive: boolean) {
+    await this.getById(id);
+    const product = await this.productRepository.setStatus(id, isActive);
+    await this.auditService.record(AuditAction.UPDATE_PRODUCT, {
+      entityType: "Product",
+      entityId: id,
+      newValues: { isActive },
+    });
+    await this.catalogCacheService.rebuild();
+    return product;
+  }
+
+  /**
+   * A product that appears on any quotation or invoice is deactivated rather
+   * than deleted, so historical documents keep a resolvable reference.
+   */
+  async remove(id: string) {
+    const product = await this.getById(id);
+    const usage = await this.productRepository.usageCount(id);
+
+    if (usage > 0) {
+      throw new ConflictError(
+        `This product appears on ${usage} document line(s) and cannot be deleted. Deactivate it instead.`,
+      );
+    }
+
+    await this.productRepository.delete(id);
+    await this.auditService.record(AuditAction.DELETE_PRODUCT, {
+      entityType: "Product",
+      entityId: id,
+      oldValues: product,
+    });
+    await this.catalogCacheService.rebuild();
+  }
+
+  /** The full product master as plain, hand-editable rows — for download and later re-import. */
+  async exportCatalog(): Promise<ProductCatalogRow[]> {
+    const { rows } = await this.productRepository.list({ skip: 0, take: 100_000 });
+    return rows.map((p) => ({
+      productCode: p.productCode,
+      name: p.name,
+      category: p.category?.name ?? null,
+      unit: p.unit.name,
+      price: Number(p.defaultPrice),
+      gstRate: Number(p.defaultGstRate),
+      hsnCode: p.hsnCode,
+      packSize: p.packSize,
+      dilutionRatio: p.dilutionRatio,
+      description: p.description,
+      isActive: p.isActive,
+      showOnWebsite: p.showOnWebsite,
+    }));
+  }
+
+  /**
+   * Import an edited catalog export. A row whose product code matches an
+   * existing product updates it; a row with no match (no code, or a code not
+   * in the system) creates a new product. A product simply absent from the
+   * file is left untouched — import never deletes or deactivates anything.
+   */
+  async importCatalog(rows: ProductCatalogRow[]): Promise<CatalogImportResult> {
+    const [categories, units] = await Promise.all([
+      this.masterDataRepository.listCategories(true),
+      this.masterDataRepository.listUnits(true),
+    ]);
+    const categoryByName = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
+    const unitByName = new Map(units.map((u) => [u.name.toLowerCase(), u.id]));
+
+    const result: CatalogImportResult = { created: 0, updated: 0, failed: 0, errors: [] };
+
+    for (const [index, row] of rows.entries()) {
+      const rowNumber = index + 1;
+      const unitId = unitByName.get(row.unit?.trim().toLowerCase() ?? "");
+      if (!unitId) {
+        result.failed += 1;
+        result.errors.push({ row: rowNumber, name: row.name, message: `Unknown unit "${row.unit}"` });
+        continue;
+      }
+
+      let categoryId: string | null = null;
+      if (row.category) {
+        const found = categoryByName.get(row.category.trim().toLowerCase());
+        if (!found) {
+          result.failed += 1;
+          result.errors.push({ row: rowNumber, name: row.name, message: `Unknown category "${row.category}"` });
+          continue;
+        }
+        categoryId = found;
+      }
+
+      const input: ProductInput = {
+        productCode: row.productCode ?? undefined,
+        name: row.name,
+        categoryId,
+        description: row.description ?? null,
+        dilutionRatio: row.dilutionRatio ?? null,
+        packSize: row.packSize ?? null,
+        hsnCode: row.hsnCode ?? null,
+        defaultPrice: row.price,
+        defaultGstRate: row.gstRate,
+        unitId,
+        isActive: row.isActive,
+        showOnWebsite: row.showOnWebsite,
+      };
+
+      try {
+        const existing = row.productCode ? await this.productRepository.findByCode(row.productCode.trim()) : null;
+        if (existing) {
+          await this.updateCore(existing.id, input);
+          result.updated += 1;
+        } else {
+          await this.createCore(input);
+          result.created += 1;
+        }
+      } catch (error) {
+        result.failed += 1;
+        result.errors.push({ row: rowNumber, name: row.name, message: error instanceof Error ? error.message : "Import failed" });
+      }
+    }
+
+    await this.catalogCacheService.rebuild();
+    return result;
+  }
+
+  private async createCore(input: ProductInput): Promise<ProductWithRelations> {
     await this.assertUnitExists(input.unitId);
 
     const productCode = input.productCode?.trim() || (await this.nextProductCode());
@@ -66,7 +227,7 @@ export class ProductService {
     return product;
   }
 
-  async update(id: string, input: Partial<ProductInput>) {
+  private async updateCore(id: string, input: Partial<ProductInput>): Promise<ProductWithRelations> {
     const before = await this.productRepository.findById(id);
     if (!before) throw new NotFoundError("Product not found");
     if (input.unitId) await this.assertUnitExists(input.unitId);
@@ -102,39 +263,6 @@ export class ProductService {
       newValues: product,
     });
     return product;
-  }
-
-  async setStatus(id: string, isActive: boolean) {
-    await this.getById(id);
-    const product = await this.productRepository.setStatus(id, isActive);
-    await this.auditService.record(AuditAction.UPDATE_PRODUCT, {
-      entityType: "Product",
-      entityId: id,
-      newValues: { isActive },
-    });
-    return product;
-  }
-
-  /**
-   * A product that appears on any quotation or invoice is deactivated rather
-   * than deleted, so historical documents keep a resolvable reference.
-   */
-  async remove(id: string) {
-    const product = await this.getById(id);
-    const usage = await this.productRepository.usageCount(id);
-
-    if (usage > 0) {
-      throw new ConflictError(
-        `This product appears on ${usage} document line(s) and cannot be deleted. Deactivate it instead.`,
-      );
-    }
-
-    await this.productRepository.delete(id);
-    await this.auditService.record(AuditAction.DELETE_PRODUCT, {
-      entityType: "Product",
-      entityId: id,
-      oldValues: product,
-    });
   }
 
   private async assertUnitExists(unitId: string) {

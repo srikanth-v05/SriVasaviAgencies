@@ -136,6 +136,9 @@ export function buildRouter(): Router {
   // ------------------------------------------------------------------ products
   router.get("/products", requirePermission("products:read"), validate({ query: s.productQuery }), asyncHandler(products.list));
   router.post("/products", requirePermission("products:write"), validate(s.productSchema), asyncHandler(products.create));
+  // Must be registered before "/products/:id" or Express would try to match "export" as an id.
+  router.get("/products/export", requirePermission("products:read"), asyncHandler(products.export));
+  router.post("/products/import", requirePermission("products:write"), validate(s.productImportSchema), asyncHandler(products.import));
   router.get("/products/:id", requirePermission("products:read"), validate({ params: s.idParam }), asyncHandler(products.get));
   router.put(
     "/products/:id",

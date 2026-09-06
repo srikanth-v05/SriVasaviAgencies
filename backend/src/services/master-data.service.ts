@@ -1,27 +1,33 @@
 import { Prisma } from "@prisma/client";
 import { MasterDataRepository } from "../repositories/master-data.repository";
+import { CatalogCacheService } from "./catalog-cache.service";
 import { ConflictError, NotFoundError } from "../utils/errors";
 import { slugify } from "../utils/slug";
 
 /** Categories, units and GST rates (architecture.md §8, §22). */
 export class MasterDataService {
-  constructor(private repository: MasterDataRepository) {}
+  constructor(
+    private repository: MasterDataRepository,
+    private catalogCacheService: CatalogCacheService,
+  ) {}
 
   listCategories(includeInactive = false) {
     return this.repository.listCategories(includeInactive);
   }
 
-  createCategory(input: { name: string; description?: string | null; zoneCode?: string | null; sortOrder?: number }) {
-    return this.repository.createCategory({
+  async createCategory(input: { name: string; description?: string | null; zoneCode?: string | null; sortOrder?: number }) {
+    const category = await this.repository.createCategory({
       name: input.name,
       slug: slugify(input.name),
       description: input.description ?? null,
       zoneCode: input.zoneCode ?? null,
       sortOrder: input.sortOrder ?? 0,
     });
+    await this.catalogCacheService.rebuild();
+    return category;
   }
 
-  updateCategory(
+  async updateCategory(
     id: string,
     input: { name?: string; description?: string | null; zoneCode?: string | null; sortOrder?: number; isActive?: boolean },
   ) {
@@ -32,7 +38,9 @@ export class MasterDataService {
       ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
     };
-    return this.repository.updateCategory(id, data);
+    const category = await this.repository.updateCategory(id, data);
+    await this.catalogCacheService.rebuild();
+    return category;
   }
 
   /** A category still holding products is deactivated rather than removed. */
@@ -42,6 +50,7 @@ export class MasterDataService {
       throw new ConflictError(`This category holds ${products} product(s). Move or deactivate them first.`);
     }
     await this.repository.deleteCategory(id);
+    await this.catalogCacheService.rebuild();
   }
 
   listUnits(includeInactive = false) {
@@ -55,7 +64,10 @@ export class MasterDataService {
   async updateUnit(id: string, input: { name?: string; shortName?: string; isActive?: boolean }) {
     const unit = await this.repository.findUnitById(id);
     if (!unit) throw new NotFoundError("Unit not found");
-    return this.repository.updateUnit(id, input);
+    const updated = await this.repository.updateUnit(id, input);
+    // A unit's name/short name is embedded in every cached product that uses it.
+    await this.catalogCacheService.rebuild();
+    return updated;
   }
 
   listGstRates() {

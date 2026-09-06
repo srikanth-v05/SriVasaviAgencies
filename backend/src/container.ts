@@ -27,6 +27,7 @@ import { UserService } from "./services/user.service";
 import { CompanyService } from "./services/company.service";
 import { MasterDataService } from "./services/master-data.service";
 import { ProductService } from "./services/product.service";
+import { CatalogCacheService } from "./services/catalog-cache.service";
 import { CustomerService } from "./services/customer.service";
 import { DocumentPricingService } from "./services/document-pricing.service";
 import { NumberingService } from "./services/numbering.service";
@@ -128,7 +129,15 @@ container.singleton(
   () => new CompanyService(container.resolve("companyRepository"), container.resolve("auditService")),
 );
 
-container.singleton("masterDataService", () => new MasterDataService(container.resolve("masterDataRepository")));
+container.singleton(
+  "catalogCacheService",
+  () => new CatalogCacheService(container.resolve("productRepository"), container.resolve("masterDataRepository")),
+);
+
+container.singleton(
+  "masterDataService",
+  () => new MasterDataService(container.resolve("masterDataRepository"), container.resolve("catalogCacheService")),
+);
 
 container.singleton(
   "productService",
@@ -137,6 +146,7 @@ container.singleton(
       container.resolve("productRepository"),
       container.resolve("masterDataRepository"),
       container.resolve("auditService"),
+      container.resolve("catalogCacheService"),
     ),
 );
 
@@ -281,8 +291,7 @@ container.singleton(
   "publicController",
   () =>
     new PublicController(
-      container.resolve("productService"),
-      container.resolve("masterDataService"),
+      container.resolve("catalogCacheService"),
       container.resolve("companyService"),
       container.resolve("enquiryService"),
     ),

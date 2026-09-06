@@ -138,6 +138,26 @@ export const productSchema = z.object({
   showOnWebsite: z.boolean().optional(),
 });
 
+/** One row of a hand-edited catalog export re-uploaded through /products/import. */
+export const productCatalogRowSchema = z.object({
+  productCode: z.string().trim().min(1).nullish(),
+  name: z.string().trim().min(2),
+  category: z.string().trim().nullish(),
+  unit: z.string().trim().min(1),
+  price: z.coerce.number().min(0),
+  gstRate: z.coerce.number().min(0).max(100),
+  hsnCode: z.string().trim().nullish(),
+  packSize: z.string().trim().nullish(),
+  dilutionRatio: z.string().trim().nullish(),
+  description: z.string().nullish(),
+  isActive: z.boolean().optional(),
+  showOnWebsite: z.boolean().optional(),
+});
+
+export const productImportSchema = z.object({
+  products: z.array(productCatalogRowSchema).min(1, "The file has no products in it"),
+});
+
 export const productQuery = paginationQuery.extend({
   categoryId: z.string().uuid().optional(),
   isActive: z

@@ -40,4 +40,18 @@ export class ProductController {
     await this.productService.remove(req.params.id);
     return ApiResponse.noContent(res);
   };
+
+  export = async (_req: Request, res: Response) => {
+    const products = await this.productService.exportCatalog();
+    const filename = `catalog-${new Date().toISOString().slice(0, 10)}.json`;
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    return res.send(JSON.stringify({ exportedAt: new Date().toISOString(), products }, null, 2));
+  };
+
+  import = async (req: Request, res: Response) => {
+    const result = await this.productService.importCatalog(req.body.products);
+    const message = `${result.created} created, ${result.updated} updated, ${result.failed} failed`;
+    return ApiResponse.success(res, result, message);
+  };
 }
