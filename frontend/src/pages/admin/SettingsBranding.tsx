@@ -62,19 +62,28 @@ function BrandingBody({ company }: { company: CompanySettings }) {
           <div className="w-64 rounded-[4px] border border-dashed border-hairline bg-surface px-4 py-3 text-right">
             <p className="text-[10px] text-muted">For {company.tradeName ?? company.name}</p>
 
+            {/* "For ..." and "Authorised Signatory" are right-aligned by the parent's
+                text-right, so the artwork is right-aligned to that same edge too —
+                otherwise it visibly drifts left of the text, which is what the real
+                PDF did before this was fixed. Whichever image is wider (the
+                signature, when both are present) sits flush right; the other is
+                centred inside *that* image's own footprint, so a signature still
+                crosses through the seal's middle rather than sitting beside it. */}
             <div className="relative mx-auto my-2 h-20 w-full">
               {company.sealUrl && (
                 <img
                   src={company.sealUrl}
                   alt="Company seal"
-                  className="absolute left-1/2 top-0 h-20 w-20 -translate-x-1/2 object-contain opacity-85"
+                  className={`absolute top-0 h-20 w-20 object-contain opacity-85 ${
+                    company.signatureUrl ? "right-8" : "right-0"
+                  }`}
                 />
               )}
               {company.signatureUrl && (
                 <img
                   src={company.signatureUrl}
                   alt="Authorised signature"
-                  className="absolute left-1/2 top-3 h-14 w-36 -translate-x-1/2 object-contain"
+                  className="absolute right-0 top-3 h-14 w-36 object-contain"
                 />
               )}
               {!company.sealUrl && !company.signatureUrl && (

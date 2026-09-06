@@ -374,6 +374,7 @@ export class PdfService {
   private signatureBlock(doc: Doc, company: CompanySettings): void {
     const blockWidth = 200;
     const blockX = PAGE_MARGIN + CONTENT_WIDTH - blockWidth;
+    const blockRight = blockX + blockWidth;
     const top = doc.y;
 
     doc
@@ -387,29 +388,34 @@ export class PdfService {
 
     const seal = this.resolveImage(company.sealUrl);
     const signature = this.resolveImage(company.signatureUrl);
+    const sealSize = 54;
+    const sigWidth = 108;
+    const sigHeight = 40;
+
+    // Both "For <company>" and "Authorised Signatory" above/below are set with
+    // align: "right" against blockRight, so their right edges already line up
+    // with each other. The seal and signature used to be centred in the whole
+    // 200pt block instead of sharing that same edge, which visibly drifted left
+    // of the text. Whichever image is widest — the signature, when both are
+    // present — is now right-aligned to blockRight like the text, and the other
+    // is centred inside *that* image's own footprint, so the two still cross
+    // through one another's middle rather than sitting side by side.
+    const outerWidth = signature ? sigWidth : sealSize;
+    const outerX = blockRight - outerWidth;
 
     if (seal) {
-      // Centred in the block, and slightly transparent so a signature laid over
-      // it stays readable — a real stamp is ink on paper, not an opaque sticker.
-      const sealSize = 54;
+      const sealX = signature ? outerX + (outerWidth - sealSize) / 2 : outerX;
+      // Slightly transparent so a signature laid over it stays readable — a
+      // real stamp is ink on paper, not an opaque sticker.
       doc.save();
       doc.opacity(0.85);
-      this.drawImage(doc, seal, blockX + blockWidth / 2 - sealSize / 2, artTop, sealSize, sealSize);
+      this.drawImage(doc, seal, sealX, artTop, sealSize, sealSize);
       doc.restore();
     }
 
     if (signature) {
       // Drawn after the seal, so it sits on top of it.
-      const sigWidth = 108;
-      const sigHeight = 40;
-      this.drawImage(
-        doc,
-        signature,
-        blockX + blockWidth / 2 - sigWidth / 2 + 8,
-        artTop + (seal ? 12 : 8),
-        sigWidth,
-        sigHeight,
-      );
+      this.drawImage(doc, signature, outerX, artTop + (seal ? 12 : 8), sigWidth, sigHeight);
     }
 
     doc.y = artTop + artHeight;
