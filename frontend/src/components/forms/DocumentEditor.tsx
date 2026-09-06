@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useCompany, useCustomers, useProducts } from "@/features/queries";
-import { previewDocument, type DraftLine } from "@/lib/gst";
+import { previewDocument, stateCodeFromGstin, type DraftLine } from "@/lib/gst";
 import { money, amount, today, dateInput } from "@/lib/format";
 import { Button, Field, Input, Panel, PanelHeader, Select, Textarea } from "@/components/common/ui";
-import type { Customer, DiscountType, DocumentLine, Product } from "@/types";
+import type { DiscountType, DocumentLine, Product } from "@/types";
 
 /**
  * Type-to-filter product search, replacing a plain <select> that would
@@ -131,7 +131,6 @@ export interface DocumentPayload {
   date: string;
   secondaryDate: string;
   placeOfSupply: string;
-  placeOfSupplyStateCode: string;
   notes: string;
   termsAndConditions: string;
   paymentTerms?: string;
@@ -157,7 +156,7 @@ interface Props {
     customerId?: string;
     date?: string;
     secondaryDate?: string | null;
-    placeOfSupplyStateCode?: string | null;
+    placeOfSupply?: string | null;
     notes?: string | null;
     termsAndConditions?: string | null;
     paymentTerms?: string | null;
@@ -235,14 +234,16 @@ export function DocumentEditor({ kind, initial, submitLabel, isSubmitting, onSub
   const [lines, setLines] = useState<EditorLine[]>(
     initial?.items?.length ? initial.items.map(fromExisting) : [emptyLine()],
   );
-  const [placeOfSupplyOverride, setPlaceOfSupplyOverride] = useState<string>(initial?.placeOfSupplyStateCode ?? "");
+  const [placeOfSupply, setPlaceOfSupply] = useState(initial?.placeOfSupply ?? "");
   const [bulkCount, setBulkCount] = useState("1");
 
   const customer = customers.find((c) => c.id === customerId);
-  // Not derived from the customer's state — left for the user to set explicitly.
-  // The server still falls back to the customer's state if this is left blank.
-  const placeOfSupplyStateCode = placeOfSupplyOverride;
-  const isInterState = Boolean(company && placeOfSupplyStateCode && company.stateCode !== placeOfSupplyStateCode);
+  // The CGST/SGST vs IGST split always follows the customer's GSTIN — a
+  // customer with several delivery branches has one GST registration, so
+  // which branch this particular document is for (typed into "Place of
+  // supply" below) never changes the tax treatment.
+  const customerStateCode = customer ? (stateCodeFromGstin(customer.gstin) ?? customer.stateCode) : "";
+  const isInterState = Boolean(company && customerStateCode && company.stateCode !== customerStateCode);
 
   const totals = useMemo(
     () => previewDocument(lines, isInterState, company?.roundingMode ?? "NEAREST_RUPEE"),
@@ -281,8 +282,7 @@ export function DocumentEditor({ kind, initial, submitLabel, isSubmitting, onSub
       customerId,
       date: documentDate,
       secondaryDate,
-      placeOfSupply: placeOfSupplyStateCode === customer.stateCode ? customer.state : stateNameFor(placeOfSupplyStateCode, customers),
-      placeOfSupplyStateCode,
+      placeOfSupply: placeOfSupply.trim(),
       notes,
       termsAndConditions: terms,
       paymentTerms,
@@ -332,24 +332,20 @@ export function DocumentEditor({ kind, initial, submitLabel, isSubmitting, onSub
             label="Place of supply"
             htmlFor="pos"
             hint={
-              placeOfSupplyStateCode
+              customer
                 ? isInterState
-                  ? "Different state — IGST applies."
-                  : "Same state as you — CGST and SGST apply."
-                : customer
-                  ? `Left blank, defaults to ${customer.state} (${customer.stateCode}).`
-                  : "Left blank, defaults to the customer's own state."
+                  ? `Tax follows ${customer.companyName ?? customer.name}'s GSTIN — different state, IGST applies.`
+                  : `Tax follows ${customer.companyName ?? customer.name}'s GSTIN — same state, CGST and SGST apply.`
+                : "Free text — e.g. which branch this delivery is for. Tax always follows the customer's GSTIN, not this field."
             }
             className="sm:col-span-2"
           >
-            <Select id="pos" value={placeOfSupplyStateCode} onChange={(e) => setPlaceOfSupplyOverride(e.target.value)}>
-              <option value="">Select place of supply…</option>
-              {STATE_CODES.map((state) => (
-                <option key={state.code} value={state.code}>
-                  {state.name} ({state.code})
-                </option>
-              ))}
-            </Select>
+            <Input
+              id="pos"
+              placeholder="e.g. Branch name or delivery location"
+              value={placeOfSupply}
+              onChange={(e) => setPlaceOfSupply(e.target.value)}
+            />
           </Field>
 
           {kind === "invoice" && (
@@ -635,15 +631,7 @@ export function DocumentEditor({ kind, initial, submitLabel, isSubmitting, onSub
   );
 }
 
-function stateNameFor(code: string, customers: Customer[]): string {
-  return (
-    STATE_CODES.find((s) => s.code === code)?.name ??
-    customers.find((c) => c.stateCode === code)?.state ??
-    ""
-  );
-}
-
-/** GST state codes. Kept here so a place of supply can be set independently of the customer. */
+/** GST state codes, used by the customer/company forms' own state pickers. */
 export const STATE_CODES: { code: string; name: string }[] = [
   { code: "01", name: "Jammu and Kashmir" },
   { code: "02", name: "Himachal Pradesh" },

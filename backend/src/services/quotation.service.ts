@@ -14,7 +14,6 @@ export interface QuotationInput {
   quotationDate?: string | Date;
   validUntil?: string | Date | null;
   placeOfSupply?: string;
-  placeOfSupplyStateCode?: string;
   notes?: string | null;
   termsAndConditions?: string | null;
   items: LineDraft[];
@@ -63,7 +62,7 @@ export class QuotationService {
     if (!customer) throw new ValidationError("The selected customer does not exist");
 
     const quotationDate = toDate(input.quotationDate) ?? new Date();
-    const placeOfSupplyStateCode = input.placeOfSupplyStateCode ?? customer.stateCode;
+    const placeOfSupplyStateCode = stateCodeFromGstin(customer.gstin) ?? customer.stateCode;
     const placeOfSupply = input.placeOfSupply ?? customer.state;
 
     const priced = await this.pricingService.price({
@@ -138,7 +137,7 @@ export class QuotationService {
     if (!customer) throw new ValidationError("The selected customer does not exist");
 
     const quotationDate = toDate(input.quotationDate) ?? before.quotationDate;
-    const placeOfSupplyStateCode = input.placeOfSupplyStateCode ?? customer.stateCode;
+    const placeOfSupplyStateCode = stateCodeFromGstin(customer.gstin) ?? customer.stateCode;
 
     const priced = await this.pricingService.price({
       lines: input.items,
@@ -211,7 +210,6 @@ export class QuotationService {
       {
         customerId: source.customerId,
         placeOfSupply: source.placeOfSupply,
-        placeOfSupplyStateCode: source.placeOfSupplyStateCode,
         notes: source.notes,
         termsAndConditions: source.termsAndConditions,
         items: source.items.map((item) => ({
@@ -276,4 +274,17 @@ export function toDate(value: string | Date | null | undefined): Date | undefine
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) throw new ValidationError(`Invalid date: ${String(value)}`);
   return date;
+}
+
+/**
+ * The first two digits of a GSTIN are the state code it was issued under —
+ * the authoritative source for whether a supply is inter- or intra-state.
+ * Preferred over the customer's own stored state, which is a free-typed
+ * address field and can drift from what the customer is actually registered
+ * under for GST.
+ */
+export function stateCodeFromGstin(gstin: string | null | undefined): string | null {
+  if (!gstin) return null;
+  const prefix = gstin.trim().slice(0, 2);
+  return /^\d{2}$/.test(prefix) ? prefix : null;
 }

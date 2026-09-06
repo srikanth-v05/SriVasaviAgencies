@@ -10,14 +10,13 @@ import { AuditService, AuditAction } from "./audit.service";
 import { NotFoundError, ValidationError, ConflictError, DocumentStateError } from "../utils/errors";
 import { prisma, type PrismaTransaction } from "../db/prisma";
 import { withRetry } from "../db/retry";
-import { toDate } from "./quotation.service";
+import { toDate, stateCodeFromGstin } from "./quotation.service";
 
 export interface InvoiceInput {
   customerId: string;
   invoiceDate?: string | Date;
   dueDate?: string | Date | null;
   placeOfSupply?: string;
-  placeOfSupplyStateCode?: string;
   paymentTerms?: string | null;
   notes?: string | null;
   termsAndConditions?: string | null;
@@ -70,7 +69,7 @@ export class InvoiceService {
     if (!customer) throw new ValidationError("The selected customer does not exist");
 
     const invoiceDate = toDate(input.invoiceDate) ?? new Date();
-    const placeOfSupplyStateCode = input.placeOfSupplyStateCode ?? customer.stateCode;
+    const placeOfSupplyStateCode = stateCodeFromGstin(customer.gstin) ?? customer.stateCode;
 
     const priced = await this.pricingService.price({
       lines: input.items,
@@ -120,7 +119,7 @@ export class InvoiceService {
     const customer = await this.customerRepository.findById(input.customerId);
     if (!customer) throw new ValidationError("The selected customer does not exist");
 
-    const placeOfSupplyStateCode = input.placeOfSupplyStateCode ?? customer.stateCode;
+    const placeOfSupplyStateCode = stateCodeFromGstin(customer.gstin) ?? customer.stateCode;
     const priced = await this.pricingService.price({
       lines: input.items,
       companyStateCode: company.stateCode,

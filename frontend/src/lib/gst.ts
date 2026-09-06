@@ -28,6 +28,18 @@ export interface PreviewLine {
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
+/**
+ * The first two digits of a GSTIN are the state code it was issued under —
+ * mirrors the server's own rule (invoice/quotation service) so the live
+ * preview agrees with what actually gets saved. A customer's stored state is
+ * only a fallback for one with no GSTIN on file.
+ */
+export function stateCodeFromGstin(gstin: string | null | undefined): string | null {
+  if (!gstin) return null;
+  const prefix = gstin.trim().slice(0, 2);
+  return /^\d{2}$/.test(prefix) ? prefix : null;
+}
+
 export function previewLine(line: DraftLine, isInterState: boolean): PreviewLine {
   const grossValue = round2((Number(line.quantity) || 0) * (Number(line.unitPrice) || 0));
 
