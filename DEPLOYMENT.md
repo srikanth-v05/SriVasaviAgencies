@@ -91,7 +91,21 @@ traffic.
 | `COOKIE_SAMESITE` | `strict` |
 | `STORAGE_DIR` | `/var/data/storage` |
 | `LOG_LEVEL` | `info` |
-| `ALLOWED_ORIGINS` | your Vercel URL — only needed if you skip the rewrite |
+| `ALLOWED_ORIGINS` | your Vercel URL, e.g. `https://your-site.vercel.app` |
+
+**`ALLOWED_ORIGINS` is required even with the Vercel rewrite in place** — this
+caught a real deploy. The rewrite makes the *page* same-origin, but the browser
+still sends its own `Origin` header on every state-changing request (`POST`,
+`PUT`, `PATCH`, `DELETE`) regardless of whether the request looks same-origin to
+the page, and that header carries the Vercel domain the visitor is actually on.
+Without it listed here, every sign-in is rejected by CORS — and reached the
+browser as a bare "Internal server error" until this was fixed, because a
+rejected `Access-Control` origin was thrown as a plain `Error` instead of a
+proper 403. If you deployed before this fix, a `git pull` picks it up: a
+misconfigured origin now answers with a clear
+`Origin not allowed by CORS policy: <origin>` instead.
+
+Multiple origins are comma-separated: `https://your-site.vercel.app,https://your-custom-domain.com`.
 
 Generate each secret separately:
 
@@ -186,13 +200,12 @@ Then in a browser:
 
 ## Calling the API directly
 
-Skipping the Vercel rewrite and pointing the browser straight at Render takes
-three changes together — all three, or sessions break:
+Skipping the Vercel rewrite and pointing the browser straight at Render changes
+two more settings on top of `ALLOWED_ORIGINS`, which is already required either way:
 
 | Where | Setting |
 |---|---|
 | Vercel | `VITE_API_URL` = `https://sva-api.onrender.com/api/v1` |
-| Render | `ALLOWED_ORIGINS` = `https://your-site.vercel.app` |
 | Render | `COOKIE_SAMESITE` = `none` |
 
 `COOKIE_SAMESITE=none` is the one people miss. A `strict` cookie is never sent on
@@ -208,6 +221,8 @@ first refresh, fifteen minutes later.
 | Site loads, every API call 404s | The `/api` rewrite still has the placeholder host |
 | Logo and crest broken | The `/uploads` rewrite is missing |
 | Refresh on `/products` gives a 404 | The catch-all rewrite to `index.html` is missing |
+| Sign-in gives "Internal server error" | `ALLOWED_ORIGINS` on Render is missing your Vercel URL — required even with the rewrite, see above |
+| Sign-in gives "Origin not allowed by CORS policy: ..." | Same cause, seen cleanly — add the exact origin shown to `ALLOWED_ORIGINS` |
 | Logged out after ~15 minutes | Refresh cookie not reaching the API — see the section above |
 | Seal and signature vanished after a deploy | No Render disk; `STORAGE_DIR` is on the ephemeral filesystem |
 | First request each morning takes ~50s | Free plan cold start |

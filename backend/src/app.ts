@@ -9,6 +9,7 @@ import { requestContext } from "./middleware/request-context.middleware";
 import { httpLogger } from "./middleware/logger.middleware";
 import { apiRateLimiter } from "./middleware/rate-limit.middleware";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
+import { ForbiddenError } from "./utils/errors";
 import { buildRouter } from "./routes";
 import { ensureStorageDirs } from "./middleware/upload.middleware";
 import { env } from "./config/env";
@@ -29,7 +30,13 @@ export function createApp(): Application {
       origin(origin, callback) {
         // Same-origin and server-to-server calls arrive without an Origin header.
         if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-        return callback(new Error("Origin not allowed by CORS policy"));
+
+        // A plain Error here was reaching the browser as an opaque "Internal
+        // server error": it isn't an AppError, so the global handler couldn't
+        // tell it apart from a genuine bug and fell back to hiding it. A
+        // rejected origin is a real, expected outcome — ALLOWED_ORIGINS not yet
+        // covering a new frontend host — and deserves its own clear message.
+        callback(new ForbiddenError(`Origin not allowed by CORS policy: ${origin}`));
       },
       credentials: true,
     }),

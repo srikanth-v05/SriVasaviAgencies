@@ -8,6 +8,7 @@ import { AuditService, AuditAction } from "./audit.service";
 import { UnauthorizedError, ValidationError, ForbiddenError } from "../utils/errors";
 import { env } from "../config/env";
 import { permissionsForRole, type RoleName } from "../config/permissions";
+import { withRetry } from "../db/retry";
 
 export interface AuthTokens {
   accessToken: string;
@@ -41,7 +42,20 @@ export class AuthService {
     return argon2.hash(password, ARGON_OPTIONS);
   }
 
+  /**
+   * Wrapped in withRetry because this is the very first database touch on a
+   * fresh request, and so the one most likely to land on a connection that has
+   * just woken up — a free-tier Render instance coming out of idle, or TiDB
+   * Serverless compute waking from scale-to-zero. Safe to retry the whole
+   * method: every write in here (a login/login-failed audit row, markLogin) is
+   * naturally idempotent to repeat, unlike `refresh`, which revokes a token
+   * before issuing new ones and cannot be retried as a single unit.
+   */
   async login(email: string, password: string): Promise<AuthResult> {
+    return withRetry(() => this.attemptLogin(email, password), { label: "auth.login" });
+  }
+
+  private async attemptLogin(email: string, password: string): Promise<AuthResult> {
     const user = await this.userRepository.findByEmail(email);
 
     // Verify against a dummy hash when the user is unknown so that response time
@@ -93,7 +107,18 @@ export class AuthService {
     }
 
     const hash = hashToken(refreshToken);
-    const stored = await this.refreshTokenRepository.findActiveByHash(hash);
+
+    // Only the reads are wrapped, not the method as a whole: the revoke below
+    // must run at most once per presented token, because a second revoke of an
+    // already-revoked token would read back as "not found" and get treated as
+    // token reuse — cutting every one of the user's sessions loose over what
+    // was really just a connection blip. A blip is overwhelmingly a first-query
+    // event, so covering these two reads captures the real-world case without
+    // that hazard.
+    const stored = await withRetry(
+      () => this.refreshTokenRepository.findActiveByHash(hash),
+      { label: "auth.refresh.findToken" },
+    );
     if (!stored) {
       // Either already used or revoked. Treat reuse as a compromise and cut the
       // whole session family loose.
@@ -101,7 +126,10 @@ export class AuthService {
       throw new UnauthorizedError("Refresh token is no longer valid");
     }
 
-    const user = await this.userRepository.findById(payload.sub);
+    const user = await withRetry(
+      () => this.userRepository.findById(payload.sub),
+      { label: "auth.refresh.findUser" },
+    );
     if (!user || !user.isActive) throw new UnauthorizedError("Account is unavailable");
 
     await this.refreshTokenRepository.revoke(hash);
