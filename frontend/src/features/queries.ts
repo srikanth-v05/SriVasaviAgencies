@@ -485,3 +485,12 @@ export function useRemoveBranding() {
     },
   });
 }
+
+/* -------------------------------------------------------------------- auth */
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (body: { currentPassword: string; newPassword: string }) =>
+      api.post<null>("/auth/change-password", body),
+  });
+}

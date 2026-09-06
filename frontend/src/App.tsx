@@ -13,6 +13,7 @@ import { BulkOrder } from "@/pages/public/BulkOrder";
 
 import { Login } from "@/pages/admin/Login";
 import { Dashboard } from "@/pages/admin/Dashboard";
+import { ChangePassword } from "@/pages/admin/ChangePassword";
 import { Products } from "@/pages/admin/Products";
 import { ProductForm } from "@/pages/admin/ProductForm";
 import { Customers } from "@/pages/admin/Customers";
@@ -59,6 +60,8 @@ export function App() {
         }
       >
         <Route index element={<Guard permission="dashboard:read" element={<Dashboard />} />} />
+        {/* No permission gate: every signed-in user can change their own password. */}
+        <Route path="account/change-password" element={<ChangePassword />} />
 
         <Route path="products" element={<Guard permission="products:read" element={<Products />} />} />
         <Route path="products/new" element={<Guard permission="products:write" element={<ProductForm />} />} />

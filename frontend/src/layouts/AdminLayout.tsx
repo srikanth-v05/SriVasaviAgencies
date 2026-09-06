@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   ScrollText,
   LogOut,
+  KeyRound,
   Menu,
   X,
   type LucideIcon,
@@ -198,6 +199,14 @@ export function AdminLayout() {
                 {user?.role.replace(/_/g, " ")}
               </p>
             </div>
+            <button
+              type="button"
+              onClick={() => navigate("/admin/account/change-password")}
+              aria-label="Change password"
+              className="rounded-lg p-2 text-muted transition-colors hover:bg-ground-deep hover:text-ink"
+            >
+              <KeyRound className="h-[18px] w-[18px]" strokeWidth={2} />
+            </button>
             <button
               type="button"
               onClick={handleSignOut}
