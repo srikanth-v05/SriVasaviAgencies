@@ -163,7 +163,15 @@ container.singleton(
 );
 
 container.singleton("numberingService", () => new NumberingService());
-container.singleton("documentPricingService", () => new DocumentPricingService(container.resolve("productRepository")));
+container.singleton(
+  "documentPricingService",
+  () =>
+    new DocumentPricingService(
+      container.resolve("productRepository"),
+      container.resolve("productService"),
+      container.resolve("masterDataRepository"),
+    ),
+);
 
 container.singleton(
   "quotationService",

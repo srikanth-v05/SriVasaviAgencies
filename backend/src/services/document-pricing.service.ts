@@ -1,5 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { ProductRepository, type ProductWithRelations } from "../repositories/product.repository";
+import { MasterDataRepository } from "../repositories/master-data.repository";
+import type { ProductService } from "./product.service";
 import { calculateDocument, type DiscountType, type LineInput, type RoundingMode, type SupplyType } from "../domain/gst";
 import { paiseToDecimalString, parseScaled, formatScaled } from "../utils/money";
 import { ValidationError } from "../utils/errors";
@@ -97,15 +99,20 @@ export interface PriceDocumentInput {
  * minimum, no maximum, and no warning based on it (architecture.md §2.1, §13, §30).
  */
 export class DocumentPricingService {
-  constructor(private productRepository: ProductRepository) {}
+  constructor(
+    private productRepository: ProductRepository,
+    private productService: ProductService,
+    private masterDataRepository: MasterDataRepository,
+  ) {}
 
   async price(input: PriceDocumentInput): Promise<PricingResult> {
     if (input.lines.length === 0) {
       throw new ValidationError("A document needs at least one line item");
     }
 
-    const products = await this.loadProducts(input.lines, input.tx);
-    const resolved = input.lines.map((line, index) => this.resolveLine(line, index, products));
+    const draftLines = await this.autoCreateMissingProducts(input.lines, input.tx);
+    const products = await this.loadProducts(draftLines, input.tx);
+    const resolved = draftLines.map((line, index) => this.resolveLine(line, index, products));
 
     const calculation = calculateDocument({
       lines: resolved.map((r) => r.engineInput),
@@ -164,6 +171,59 @@ export class DocumentPricingService {
       },
       priceOverrides: collectOverrides(resolved),
     };
+  }
+
+  /**
+   * A line typed free-hand (no product picked) becomes a new product in the
+   * master catalogue rather than a one-off snapshot with nothing behind it —
+   * so it shows up in the picker and reports the next time it's billed. A
+   * name that already matches an existing product links to it instead of
+   * creating a duplicate.
+   */
+  private async autoCreateMissingProducts(lines: LineDraft[], tx?: PrismaTransaction): Promise<LineDraft[]> {
+    const result: LineDraft[] = [];
+
+    for (const line of lines) {
+      const name = line.productName?.trim();
+      if (line.productId || !name) {
+        result.push(line);
+        continue;
+      }
+
+      const existing = await this.productRepository.findByName(name, tx);
+      if (existing) {
+        result.push({ ...line, productId: existing.id });
+        continue;
+      }
+
+      const unitId = await this.resolveOrCreateUnit(line.unit?.trim() || "Nos");
+      const priceGiven = line.unitPrice !== undefined && line.unitPrice !== null && line.unitPrice !== "";
+      const gstGiven = line.gstRate !== undefined && line.gstRate !== null && line.gstRate !== "";
+
+      const created = await this.productService.create({
+        name,
+        unitId,
+        hsnCode: line.hsnCode?.trim() || null,
+        defaultPrice: priceGiven ? Number(line.unitPrice) : 0,
+        defaultGstRate: gstGiven ? Number(line.gstRate) : 18,
+        showOnWebsite: false,
+      });
+      result.push({ ...line, productId: created.id });
+    }
+
+    return result;
+  }
+
+  /** Case-insensitive match on the unit's short or full name; a genuinely new
+   * unit (e.g. a one-off pack size) is created rather than rejected. */
+  private async resolveOrCreateUnit(unitText: string): Promise<string> {
+    const units = await this.masterDataRepository.listUnits(true);
+    const needle = unitText.toLowerCase();
+    const match = units.find((u) => u.shortName.toLowerCase() === needle || u.name.toLowerCase() === needle);
+    if (match) return match.id;
+
+    const created = await this.masterDataRepository.createUnit({ name: unitText, shortName: unitText });
+    return created.id;
   }
 
   private async loadProducts(

@@ -62,6 +62,13 @@ export class ProductRepository {
     return this.db.product.findUnique({ where: { productCode }, include: withRelations });
   }
 
+  /** Exact match (case-insensitive — the catalogue's collation handles that),
+   * used to recognise a free-typed line as an existing product before a new
+   * one is auto-created for it. */
+  findByName(name: string, tx?: PrismaTransaction): Promise<ProductWithRelations | null> {
+    return (tx ?? this.db).product.findFirst({ where: { name }, include: withRelations });
+  }
+
   /** Batch lookup used when pricing document lines, to avoid an N+1 per line. */
   findManyByIds(ids: string[], tx?: PrismaTransaction): Promise<ProductWithRelations[]> {
     if (ids.length === 0) return Promise.resolve([]);
