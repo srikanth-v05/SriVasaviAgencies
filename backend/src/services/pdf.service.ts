@@ -5,7 +5,6 @@ import { CompanySettings, Prisma } from "@prisma/client";
 import type { InvoiceFull } from "../repositories/invoice.repository";
 import type { QuotationFull } from "../repositories/quotation.repository";
 import { amountInWords, formatIndianCurrency, rupeesToPaise } from "../utils/money";
-import { env } from "../config/env";
 import { logger } from "../config/logger";
 
 type Doc = PDFKit.PDFDocument;
@@ -388,8 +387,8 @@ export class PdfService {
     const artTop = top + 12;
     const artHeight = 56;
 
-    const seal = this.resolveImage(company.sealUrl);
-    const signature = this.resolveImage(company.signatureUrl);
+    const seal = company.sealImage;
+    const signature = company.signatureImage;
     const sealSize = 54;
     const sigWidth = 108;
     const sigHeight = 40;
@@ -428,30 +427,12 @@ export class PdfService {
       .text("Authorised Signatory", blockX, doc.y, { width: blockWidth, align: "right" });
   }
 
-  /**
-   * Map a stored branding URL to a file on disk.
-   *
-   * Only paths under the storage directory are read, so a crafted settings value
-   * cannot make the PDF renderer open an arbitrary file. SVG is skipped because
-   * PDFKit cannot rasterise it.
-   */
-  private resolveImage(url: string | null | undefined): string | null {
-    if (!url || !url.startsWith("/uploads/")) return null;
-    if (url.toLowerCase().endsWith(".svg")) return null;
-
-    const root = path.resolve(env.STORAGE_DIR);
-    const target = path.resolve(root, url.replace(/^\/uploads\//, ""));
-    if (!target.startsWith(root + path.sep)) return null;
-
-    return fs.existsSync(target) ? target : null;
-  }
-
   /** Draw an image, but never let a corrupt upload break the whole document. */
-  private drawImage(doc: Doc, file: string, x: number, y: number, width: number, height: number): void {
+  private drawImage(doc: Doc, image: Buffer, x: number, y: number, width: number, height: number): void {
     try {
-      doc.image(file, x, y, { fit: [width, height], align: "center", valign: "center" });
+      doc.image(image, x, y, { fit: [width, height], align: "center", valign: "center" });
     } catch (error) {
-      logger.warn({ err: error, file }, "Could not render a branding image into the PDF");
+      logger.warn({ err: error }, "Could not render a branding image into the PDF");
     }
   }
 

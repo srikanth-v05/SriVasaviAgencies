@@ -50,6 +50,9 @@ export function buildRouter(): Router {
   pub.get("/products/:slug", validate({ params: s.slugParam }), asyncHandler(publicApi.product));
   pub.get("/categories", asyncHandler(publicApi.categories));
   pub.get("/company", asyncHandler(publicApi.company));
+  // Branding images (logo, seal, signature) stream straight out of the
+  // database — no auth, same as the static files they replaced.
+  pub.get("/branding/:asset", asyncHandler(company.brandingImage));
   pub.get("/reviews", asyncHandler(reviews.publicList));
   pub.post("/enquiries", enquiryRateLimiter, validate(s.enquirySchema), asyncHandler(publicApi.enquiry));
   router.use("/public", pub);
@@ -77,7 +80,6 @@ export function buildRouter(): Router {
   router.put("/company", requirePermission("company:manage"), validate(s.companySchema), asyncHandler(company.save));
   router.post("/company/logo", requirePermission("company:manage"), asyncHandler(company.setLogo));
   // Branding images: :asset is one of logo | seal | signature.
-  router.get("/company/branding-file-count", requirePermission("company:manage"), asyncHandler(company.brandingFileCount));
   router.post(
     "/company/branding/:asset",
     requirePermission("company:manage"),

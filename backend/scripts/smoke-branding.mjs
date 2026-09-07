@@ -98,17 +98,16 @@ async function main() {
   const sealUp = await uploadAsset("seal", sealPng, "seal.png");
   check("seal uploads", sealUp.ok, sealUp.json?.message ?? sealUp.json?.message);
   const sealUrl = sealUp.json?.data?.sealUrl;
-  check("seal URL stored under /uploads/branding", Boolean(sealUrl?.startsWith("/uploads/branding/")), sealUrl);
+  check("seal URL stored under /api/v1/public/branding", Boolean(sealUrl?.startsWith("/api/v1/public/branding/")), sealUrl);
 
   const signUp = await uploadAsset("signature", signPng, "sign.png");
   check("signature uploads", signUp.ok);
   const signUrl = signUp.json?.data?.signatureUrl;
-  check("signature URL stored", Boolean(signUrl?.startsWith("/uploads/branding/")), signUrl);
-
-  check("filename is generated, not the client's", !sealUrl.includes("seal.png"), sealUrl);
+  check("signature URL stored", Boolean(signUrl?.startsWith("/api/v1/public/branding/")), signUrl);
 
   // -------------------------------------------------------- served back
   const fetched = await fetch(`http://localhost:4000${sealUrl}`);
+  const withBrandingSealBytes = Buffer.from(await fetched.arrayBuffer()).length;
   check("uploaded seal is served back", fetched.ok && fetched.headers.get("content-type")?.includes("image/png"),
     `${fetched.status} ${fetched.headers.get("content-type")}`);
 
@@ -116,14 +115,8 @@ async function main() {
   const bad = await uploadAsset("seal", Buffer.from("#!/bin/sh\necho hi"), "evil.sh", "application/x-sh");
   check("non-image upload refused", bad.status === 400, bad.json?.message);
 
-  // A bad slot must be rejected *before* multer writes, otherwise every rejected
-  // upload leaves a file on disk that nothing references.
-  const beforeSlot = (await call("GET", "/company/branding-file-count")).json?.data?.files;
   const wrongSlot = await uploadAsset("banner", sealPng, "x.png");
   check("unknown asset slot refused", wrongSlot.status === 400 || wrongSlot.status === 404, `status ${wrongSlot.status}`);
-  const afterSlot = (await call("GET", "/company/branding-file-count")).json?.data?.files;
-  check("a rejected upload leaves no orphan file on disk", beforeSlot === afterSlot,
-    `${beforeSlot} -> ${afterSlot} file(s)`);
 
   const anon = await fetch(`${BASE}/company/branding/seal`, { method: "POST" }).then((r) => r.status);
   check("upload requires auth", anon === 401);
@@ -174,12 +167,16 @@ async function main() {
   check("declaration stored on company settings", Boolean(declaration), declaration?.slice(0, 48) + "…");
 
   // ---------------------------------------------------------- replacing
+  // The URL is a fixed endpoint (the image lives in the database row, not a
+  // per-upload filename), so replacing keeps the same URL but serves new bytes.
   const replacement = await uploadAsset("seal", pngBytes(48, 48, [10, 120, 60]), "seal2.png");
   const newSealUrl = replacement.json?.data?.sealUrl;
-  check("seal can be replaced", replacement.ok && newSealUrl !== sealUrl, newSealUrl);
+  check("seal replace keeps the same URL", replacement.ok && newSealUrl === sealUrl, newSealUrl);
 
-  const oldGone = await fetch(`http://localhost:4000${sealUrl}`).then((r) => r.status);
-  check("the replaced file is deleted from disk", oldGone === 404, `old URL -> ${oldGone}`);
+  const replaced = await fetch(`http://localhost:4000${sealUrl}`);
+  const replacedBytes = Buffer.from(await replaced.arrayBuffer());
+  check("the same URL now serves the replaced image", replaced.ok && replacedBytes.length !== withBrandingSealBytes,
+    `${replacedBytes.length} bytes`);
 
   // ----------------------------------------------------------- removing
   const removed = await call("DELETE", "/company/branding/signature");

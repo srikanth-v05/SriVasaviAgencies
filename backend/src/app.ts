@@ -1,4 +1,3 @@
-import path from "node:path";
 import express, { Application } from "express";
 import helmet from "helmet";
 import cors from "cors";
@@ -11,8 +10,6 @@ import { apiRateLimiter } from "./middleware/rate-limit.middleware";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { ForbiddenError } from "./utils/errors";
 import { buildRouter } from "./routes";
-import { ensureStorageDirs } from "./middleware/upload.middleware";
-import { env } from "./config/env";
 
 /**
  * Application assembly. Security middleware runs before anything that touches
@@ -49,18 +46,6 @@ export function createApp(): Application {
   app.use(requestContext);
   app.use(httpLogger);
   app.use("/api", apiRateLimiter);
-
-  // Uploaded branding images (logo, seal, signature). Served read-only; the
-  // filenames are generated server-side so nothing user-controlled is in the path.
-  ensureStorageDirs();
-  app.use(
-    "/uploads",
-    express.static(path.resolve(env.STORAGE_DIR), {
-      index: false,
-      dotfiles: "deny",
-      maxAge: "1h",
-    }),
-  );
 
   app.get("/health", (_req, res) => res.json({ status: "success", data: { ok: true } }));
   app.use("/api/v1", buildRouter());
