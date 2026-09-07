@@ -364,6 +364,29 @@ export class InvoiceService {
     return cancelled;
   }
 
+  /**
+   * The PO number is a buyer reference, not part of the tax figures, so it can
+   * still be corrected after issuing — unlike everything else `assertEditable`
+   * locks (architecture.md §16). A cancelled invoice stays untouched either way.
+   */
+  async updatePoNumber(id: string, poNumber: string | null): Promise<InvoiceFull> {
+    const before = await this.getById(id);
+    if (before.status === "CANCELLED") {
+      throw new DocumentStateError("A cancelled invoice cannot be edited");
+    }
+
+    const updated = await this.invoiceRepository.update(id, { poNumber });
+
+    await this.auditService.record(AuditAction.UPDATE_INVOICE, {
+      entityType: "Invoice",
+      entityId: id,
+      oldValues: { poNumber: before.poNumber },
+      newValues: { poNumber },
+    });
+
+    return updated;
+  }
+
   async remove(id: string): Promise<void> {
     const invoice = await this.getById(id);
     if (invoice.invoiceNumber || !EDITABLE.includes(invoice.status)) {

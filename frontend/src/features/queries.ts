@@ -297,6 +297,15 @@ export function useCancelInvoice() {
   });
 }
 
+export function useUpdateInvoicePoNumber() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, poNumber }: { id: string; poNumber: string | null }) =>
+      api.patch<Invoice>(`/invoices/${id}/po-number`, { poNumber }).then(unwrap),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["invoices"] }),
+  });
+}
+
 export function useDeleteInvoice() {
   const client = useQueryClient();
   return useMutation({

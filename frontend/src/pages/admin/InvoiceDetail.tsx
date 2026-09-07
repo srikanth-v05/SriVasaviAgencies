@@ -8,6 +8,7 @@ import {
   useFinalizeInvoice,
   useInvoice,
   useRecordPayment,
+  useUpdateInvoicePoNumber,
 } from "@/features/queries";
 import { DocumentLines, DocumentTotals, PartyBlock } from "@/components/common/DocumentView";
 import { Button, ErrorState, Field, Input, Panel, PanelHeader, Select, Spinner, StatusPill, TableShell, EmptyState } from "@/components/common/ui";
@@ -30,9 +31,12 @@ export function InvoiceDetail() {
   const remove = useDeleteInvoice();
   const recordPayment = useRecordPayment();
   const deletePayment = useDeletePayment();
+  const updatePoNumber = useUpdateInvoicePoNumber();
 
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [payment, setPayment] = useState({ amount: "", paymentDate: today(), paymentMethod: "UPI" as PaymentMethod, referenceNumber: "" });
+  const [editingPo, setEditingPo] = useState(false);
+  const [poDraft, setPoDraft] = useState("");
 
   if (isLoading) return <Spinner label="Loading invoice" />;
   if (error || !invoice) return <ErrorState error={error} onRetry={() => void refetch()} />;
@@ -56,6 +60,16 @@ export function InvoiceDetail() {
       toast.success("Payment recorded");
       setPaymentOpen(false);
       setPayment({ amount: "", paymentDate: today(), paymentMethod: "UPI", referenceNumber: "" });
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+  };
+
+  const savePoNumber = async () => {
+    try {
+      await updatePoNumber.mutateAsync({ id: invoice.id, poNumber: poDraft.trim() || null });
+      toast.success("PO number updated");
+      setEditingPo(false);
     } catch (err) {
       toast.error(errorMessage(err));
     }
@@ -259,12 +273,45 @@ export function InvoiceDetail() {
               {money(invoice.balanceDue)}
             </p>
           </div>
-          {invoice.poNumber && (
-            <div>
-              <p className="type-eyebrow text-[10px]">PO number</p>
-              <p className="type-data mt-1.5 text-sm text-ink">{invoice.poNumber}</p>
-            </div>
-          )}
+          <div>
+            <p className="type-eyebrow text-[10px]">PO number</p>
+            {editingPo ? (
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <Input
+                  autoFocus
+                  className="h-7 w-28 text-sm"
+                  value={poDraft}
+                  onChange={(e) => setPoDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void savePoNumber();
+                    if (e.key === "Escape") setEditingPo(false);
+                  }}
+                />
+                <Button size="sm" disabled={updatePoNumber.isPending} onClick={() => void savePoNumber()}>
+                  Save
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setEditingPo(false)}>
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <p className="type-data mt-1.5 flex items-center gap-2 text-sm text-ink">
+                {invoice.poNumber ?? "—"}
+                {writable && (
+                  <button
+                    type="button"
+                    className="text-xs font-normal text-muted underline decoration-dotted underline-offset-2 hover:text-ink"
+                    onClick={() => {
+                      setPoDraft(invoice.poNumber ?? "");
+                      setEditingPo(true);
+                    }}
+                  >
+                    Edit
+                  </button>
+                )}
+              </p>
+            )}
+          </div>
           {invoice.vehicleNumber && (
             <div>
               <p className="type-eyebrow text-[10px]">Vehicle number</p>

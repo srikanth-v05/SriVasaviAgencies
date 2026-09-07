@@ -219,6 +219,12 @@ export function buildRouter(): Router {
     validate({ params: s.idParam, body: s.cancelInvoiceSchema }),
     asyncHandler(invoices.cancel),
   );
+  router.patch(
+    "/invoices/:id/po-number",
+    requirePermission("invoices:write"),
+    validate({ params: s.idParam, body: s.updatePoNumberSchema }),
+    asyncHandler(invoices.updatePoNumber),
+  );
   router.get("/invoices/:id/payments", requirePermission("payments:read"), validate({ params: s.idParam }), asyncHandler(invoices.payments));
   router.get("/invoices/:id/pdf", requirePermission("invoices:read"), validate({ params: s.idParam }), asyncHandler(invoices.pdf));
 

@@ -289,6 +289,12 @@ export const cancelInvoiceSchema = z.object({
   reason: z.string().trim().min(3, "Give a reason for the cancellation"),
 });
 
+/** The PO number is a buyer reference, not part of the tax figures — the one
+ * field an issued invoice may still have corrected (architecture.md §16). */
+export const updatePoNumberSchema = z.object({
+  poNumber: z.string().trim().nullish(),
+});
+
 export const paymentMethodSchema = z.enum(["CASH", "UPI", "BANK_TRANSFER", "CHEQUE", "OTHER"]);
 
 export const paymentSchema = z.object({

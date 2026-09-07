@@ -51,6 +51,11 @@ export class InvoiceController {
     return ApiResponse.success(res, serialize(invoice), "Invoice cancelled");
   };
 
+  updatePoNumber = async (req: Request, res: Response) => {
+    const invoice = await this.invoiceService.updatePoNumber(req.params.id, req.body.poNumber ?? null);
+    return ApiResponse.success(res, serialize(invoice), "PO number updated");
+  };
+
   remove = async (req: Request, res: Response) => {
     await this.invoiceService.remove(req.params.id);
     return ApiResponse.noContent(res);
